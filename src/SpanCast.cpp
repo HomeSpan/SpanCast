@@ -12,10 +12,20 @@ void SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
     while(1);
   }
 
-  WiFi.mode(WIFI_STA);
+  #ifdef ARDUINO_ARCH_ESP32
+    WiFi.mode(WIFI_AP_STA);
+  #else
+    WiFi.mode(WIFI_STA);
+  #endif
+
   delay(10);
   deviceAddress = new SpAddress(deviceID,cfg.network);
-  wifi_set_macaddr(STATION_IF, deviceAddress->mac);
+
+  #ifdef ARDUINO_ARCH_ESP32
+    esp_wifi_set_mac(WIFI_IF_AP, deviceAddress->mac);
+  #else
+    wifi_set_macaddr(STATION_IF, deviceAddress->mac);
+  #endif
 
   esp_now_init();
 
@@ -23,21 +33,32 @@ void SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
 
   uint8_t pmk[ESP_NOW_KEY_LEN];
   mKey->create("Key for PMK",pmk,ESP_NOW_KEY_LEN); 
-  esp_now_set_kok(pmk,ESP_NOW_KEY_LEN);
 
-  localHMAC = new HMAC(mKey,deviceAddress->mac,6);
+  #ifdef ARDUINO_ARCH_ESP32
+    esp_now_set_pmk(pmk);
+    esp_now_register_recv_cb([](const esp_now_recv_info *info, const uint8_t *incomingData, int len){
+      dataReceived(info->src_addr, incomingData, len);
+    });
+    esp_now_register_send_cb([](const esp_now_send_info_t *mac, esp_now_send_status_t status){    // create callback for sending data
+     xQueueOverwrite(statusQueue, &status );
+    });
+  #else
+    esp_now_set_kok(pmk,ESP_NOW_KEY_LEN);
+    esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+    esp_now_register_recv_cb([](uint8_t *mac, uint8_t *incomingData, uint8_t len){
+      dataReceived(mac, incomingData, len);
+    });
+    esp_now_register_send_cb([](uint8_t *mac, esp_now_send_status_t status){    // create callback for sending data
+    xQueueOverwrite(statusQueue, &status);
+    });
+  #endif
 
-  esp_now_set_self_role(ESP_NOW_ROLE_COMBO);
+  statusQueue = xQueueCreate(1,sizeof(esp_now_send_status_t));    // create statusQueue even if not needed
+  localHMAC = new HMAC(mKey,deviceAddress->mac,6);                // create authentication key for the MAC of this device
 
-  esp_now_register_recv_cb(dataReceived);                               // set callback for receiving data based on version
-  statusQueue = xQueueCreate(1,sizeof(esp_now_send_status_t));                                  // create statusQueue even if not needed
-
-  esp_now_register_send_cb([](esp_now_send_info_t *mac, esp_now_send_status_t status){    // create callback for sending data
-  xQueueOverwrite(statusQueue, &status );
-  });
-
-  spConf.channelMask=cfg.channelMask;                             // save a subset of the config data that will needed in other functions
-  spConf.encrypt=cfg.encrypt;                                         
+  spConf.channelMask=cfg.channelMask;                             // save a subset of the config data that will be needed in other functions
+  spConf.encrypt=cfg.encrypt;
+  
   initializeChannels();                                           // verify channel mask and set first channel
   configured=true;                                                // set configured to true 
 }
@@ -141,7 +162,7 @@ boolean SpanCast::get(void *dataBuf){
 
 ///////////////////////////////
 
-void SpanCast::dataReceived(uint8_t *mac, uint8_t *incomingData, uint8_t len){
+void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int len){
 
   const SpAddress *srcAddress = (SpAddress *)mac;
 

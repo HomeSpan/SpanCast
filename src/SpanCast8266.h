@@ -20,7 +20,6 @@ struct esp_now_peer_info_t {
   uint8_t peer_addr[6];
 };
 
-using esp_now_send_info_t = uint8_t;
 using esp_now_send_status_t = uint8_t;
 
 ///////////////////////////////

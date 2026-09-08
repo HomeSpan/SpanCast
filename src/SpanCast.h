@@ -62,7 +62,7 @@ class SpanCast {
   static SpConfig_t spConf;                   // stores all configuration settings
   static boolean configured;                  // flag indicating SpanCast has been configured
  
-  static void dataReceived(uint8_t *mac, uint8_t *incomingData, uint8_t len);
+  static void dataReceived(const uint8_t *mac, const uint8_t *incomingData, int len);
   static uint8_t nextChannel(uint8_t channel);
   static void initializeChannels();
  
