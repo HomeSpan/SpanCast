@@ -100,10 +100,18 @@ SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, size_t
   SpanCast::mKey->create(keyContext,lmk,ESP_NOW_KEY_LEN);
   free(keyContext);
 
-  if(spConf.encrypt)
-    esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, lmk, ESP_NOW_KEY_LEN);
-  else
-    esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, NULL, 0);
+  #ifdef ARDUINO_ARCH_ESP32
+    peerInfo.channel=0;                             // 0 = matches current WiFi channel
+    peerInfo.ifidx=WIFI_IF_AP;                      // specify interface as AP
+    peerInfo.encrypt=spConf.encrypt;                // set encryption for this peer
+    memcpy(peerInfo.lmk,lmk,ESP_NOW_KEY_LEN);       // set LMK for this peer
+    esp_now_add_peer(&peerInfo);                    // add peer to ESP-NOW
+  #else
+    if(spConf.encrypt)
+      esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, lmk, ESP_NOW_KEY_LEN);
+    else
+      esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, NULL, 0);
+  #endif
 
   if(receiveSize>0){
     receiveQueue = xQueueCreate(queueDepth>0?queueDepth:1,receiveSize);
