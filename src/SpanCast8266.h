@@ -22,6 +22,10 @@ struct esp_now_peer_info_t {
 
 using esp_now_send_status_t = uint8_t;
 
+#define esp_wifi_get_country(country)  (wifi_get_country(country))
+#define WIFI_SECOND_CHAN_NONE 0
+#define esp_wifi_set_channel(channel,channel2)  wifi_promiscuous_enable(true);wifi_set_channel(channel);wifi_promiscuous_enable(false)
+
 ///////////////////////////////
 
 class MasterKey {

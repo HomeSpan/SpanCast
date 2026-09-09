@@ -128,7 +128,7 @@ boolean SpanCast::send(const void *data){
   if(sendSize==0)
     return(false);
   
-  uint8_t channel = wifi_get_channel();
+  uint8_t channel = WiFi.channel();
   uint8_t startingChannel=channel;              // set starting channel to current channel
 
   const SpAddress *destAddress = (SpAddress *)peerInfo.peer_addr;
@@ -222,7 +222,7 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
 void SpanCast::initializeChannels(){
 
   wifi_country_t country;
-  wifi_get_country(&country);
+  esp_wifi_get_country(&country);
   spConf.channelMask=spConf.channelMask & ((1<<country.nchan)-1)<<country.schan;     // overlay country-specific mask (e.g. channels 1-11, 1-13, or 1-14 only)  
 
   if(spConf.channelMask==0)
@@ -238,9 +238,7 @@ void SpanCast::initializeChannels(){
         EEPROM.write(0,channel);
         EEPROM.commit();
       }
-      wifi_promiscuous_enable(true);
-      wifi_set_channel(channel);
-      wifi_promiscuous_enable(false);
+      esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);   // set the WiFi channel
       return;
     }
   }
@@ -259,10 +257,7 @@ uint8_t SpanCast::nextChannel(uint8_t channel){
     channel=(channel<13)?channel+1:1;              // advance to next channel
   } while(!(spConf.channelMask & (1<<channel)));   // until we find next valid one
 
-  wifi_promiscuous_enable(true);
-  wifi_set_channel(channel);                       // set the WiFi channel
-  wifi_promiscuous_enable(false);
-  
+  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);   // set the WiFi channel
   EEPROM.write(0,channel);
   EEPROM.commit();  
      
