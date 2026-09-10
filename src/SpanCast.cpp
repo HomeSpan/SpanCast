@@ -29,7 +29,7 @@ void SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
 
   esp_now_init();
 
-  mKey = new MasterKey(cfg.password.c_str(),"SpanPoint");
+  mKey = new MasterKey(cfg.password.c_str(),"SpanCast");
 
   uint8_t pmk[ESP_NOW_KEY_LEN];
   mKey->create("Key for PMK",pmk,ESP_NOW_KEY_LEN); 

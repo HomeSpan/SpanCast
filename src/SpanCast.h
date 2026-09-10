@@ -41,7 +41,7 @@ class SpanCast {
     uint16_t network=1;
     String password="HomeSpan";
     boolean encrypt=true;
-    uint16_t channelMask=0x0FFE;
+    uint16_t channelMask=0;
   };
 
   int receiveSize;                            // size (in bytes) of messages to receive
@@ -53,7 +53,6 @@ class SpanCast {
 
   static MasterKey *mKey;
   static HMAC *localHMAC;
-//  static nvs_handle pointNVS;                 // NVS storage for channel number (only used for remote devices)
     
   static std::vector<SpanCast *> SpanCasts;
 
@@ -65,8 +64,11 @@ class SpanCast {
   static void dataReceived(const uint8_t *mac, const uint8_t *incomingData, int len);
   static uint8_t nextChannel(uint8_t channel);
   static void initializeChannels();
- 
+
   public:
+
+  static const uint16_t CHANS_1_11=0x0FFE;
+  static const uint16_t CHANS_1_13=0x3FFE;
 
   static void configure(uint8_t deviceID, SpConfig_t cfg=spConf);
   SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize=0, size_t queueDepth=0);

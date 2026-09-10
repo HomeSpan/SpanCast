@@ -41,7 +41,7 @@ void setup() {
 
   Serial.printf("\n\nReady.\n\n");
 
-  SpanCast::configure(46,{.network=4});
+  SpanCast::configure(46,{.network=4,.channelMask=SpanCast::CHANS_1_11});
     
   mainDevice=new SpanCast(18,sizeof(float),61);
 }
