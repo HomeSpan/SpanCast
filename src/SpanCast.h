@@ -54,6 +54,8 @@ class SpanCast {
   uint32_t receiveTime=0;                     // time (in millis) of most recent data received
   boolean initialized=false;                  // flag to ensure object was properly initialized
 
+  uint8_t lastMessageID[crypto_auth_BYTES+sizeof(uint32_t)];     // formed from last 4-byte random nonce and 32-byte HMAC to check for duplicate transmissions
+
   static MasterKey *mKey;
   static HMAC *localHMAC;
     

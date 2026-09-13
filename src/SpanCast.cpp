@@ -164,10 +164,12 @@ boolean SpanCast::send(const void *data){
   uint8_t channel = WiFi.channel();
   uint8_t startingChannel=channel;              // set starting channel to current channel
 
-  size_t msgSize=sendSize+crypto_auth_BYTES;                       // size of message with HMAC
-  uint8_t *msg=(uint8_t *)malloc(msgSize);                         // allocate new memory reflecting large size
-  memcpy(msg,data,sendSize);                                       // copy data into first part of memory block
-  localHMAC->create(msg,sendSize,msg+sendSize);                    // create HMAC from authKey and load into second part of memory block
+  uint32_t nonce=esp_random();                                                   // create random 4-byte nonce to allow rejection of duplicate messages received but not acknowlegded
+  size_t msgSize=sendSize+crypto_auth_BYTES+sizeof(nonce);                       // size of message with HMAC + nonce
+  uint8_t *msg=(uint8_t *)malloc(msgSize);                                       // allocate new memory reflecting large size
+  memcpy(msg,data,sendSize);                                                     // copy data into first part of memory block
+  memcpy(msg+sendSize,&nonce,sizeof(nonce));                                     // copy nonce into second part of memory block
+  localHMAC->create(msg,sendSize+sizeof(nonce),msg+sendSize+sizeof(nonce));      // create HMAC from authKey and load into third part of memory block
 
   esp_now_send_status_t status = ESP_NOW_SEND_FAIL;
 
@@ -213,12 +215,12 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
   }
 
   HMAC remoteHMAC(SpanCast::mKey,mac,6);
-  if(!remoteHMAC.verify(incomingData, len)){
+  if(!remoteHMAC.verify(incomingData, len) || len<=sizeof(lastMessageID)){
     ESP_LOGW(DIAG_TAG,"Ignoring unverifiable %d-byte message received from DeviceID=%hhu",len,srcAddress->devID);
     return;
   }
 
-  len-=32;
+  len-=sizeof(lastMessageID);
 
   auto it=SpanCasts.begin();
   for(;it!=SpanCasts.end() && memcmp((*it)->peerInfo.peer_addr,mac,6)!=0; it++);
@@ -237,6 +239,13 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
     ESP_LOGW(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu but matching SpanCast object expects %d bytes",len,srcAddress->devID,(*it)->receiveSize);
     return;
   }
+
+  if(!memcmp(incomingData+len,(*it)->lastMessageID,sizeof(lastMessageID))){
+    ESP_LOGI(DIAG_TAG,"Ignoring duplicate message of %d verified bytes from DeviceID=%hhu",len,srcAddress->devID);
+    return;
+  }
+
+  memcpy((*it)->lastMessageID,incomingData+len,sizeof(lastMessageID));
 
   if( ((*it)->overwriteQueue && xQueueOverwrite((*it)->receiveQueue, incomingData)) || xQueueSend((*it)->receiveQueue, incomingData, 0) ){       // overwrite or send to queue immediately
     ESP_LOGI(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu - Queue updated",len,srcAddress->devID);        

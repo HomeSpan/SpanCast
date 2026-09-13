@@ -83,7 +83,7 @@ struct RemoteTempSensor : Service::TemperatureSensor {
     if(millis()>timer+10000){
       timer=millis();
       sprintf(msg,"TEMP IS %0.1f DEGREES!",temperature*9/5+32);
-      // Serial.printf("Sending: %s\n",msg);
+      Serial.printf("Sending: %s\n",msg);
       remoteTemp->send(msg);
     }
     
@@ -101,7 +101,7 @@ void setup() {
 
   delay(1000);
 
-  SpanCast::configure(18,{.network=4});
+  SpanCast::configure(18,{.numTries=8});
 
   Serial.printf("\nAP MAC: %s\n",WiFi.softAPmacAddress().c_str());
 
