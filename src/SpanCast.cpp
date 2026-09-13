@@ -76,8 +76,9 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
     }
   }
 
-  ESP_LOGI(DIAG_TAG,"Configured as DeviceID=%hhu / NetworkID=%hu / Encryption=%s / ChannelMask=0x%04X.  Initial Channel=%hhu",
-          deviceAddress->devID,deviceAddress->netID,cfg.encrypt?"ON":"OFF",spConf.channelMask,WiFi.channel());
+  ESP_LOGI(DIAG_TAG,"Configured as DeviceID=%hhu / NetworkID=%hu / Encryption=%s / ChannelMask=0x%04X.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X.  Initial Channel=%hhu",
+          deviceAddress->devID,deviceAddress->netID,cfg.encrypt?"ON":"OFF",spConf.channelMask,
+          deviceAddress->mac[0],deviceAddress->mac[1],deviceAddress->mac[2],deviceAddress->mac[3],deviceAddress->mac[4],deviceAddress->mac[5],WiFi.channel());
 
   configured=true;                                                // set configured to true
   return(true);
@@ -138,7 +139,8 @@ SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, size_t
   initialized=true;
   SpanCasts.push_back(this);
 
-  ESP_LOGI(DIAG_TAG,"Initialized new SpanCast object with DeviceID=%hhu / SendSize=%d / ReceiveSize=%d / QueueDepth=%d",deviceID,sendSize,receiveSize,queueDepth);
+  ESP_LOGI(DIAG_TAG,"Initialized new SpanCast object with DeviceID=%hhu / SendSize=%d / ReceiveSize=%d / QueueDepth=%d.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X",deviceID,sendSize,receiveSize,queueDepth,
+          destAddress.mac[0],destAddress.mac[1],destAddress.mac[2],destAddress.mac[3],destAddress.mac[4],destAddress.mac[5]);
 }
 
 ///////////////////////////////
@@ -171,13 +173,13 @@ boolean SpanCast::send(const void *data){
     for(int i=0; status!=ESP_NOW_SEND_SUCCESS && i<3; i++){      
       esp_now_send(peerInfo.peer_addr, msg, msgSize);
       xQueueReceive(statusQueue, &status, pdMS_TO_TICKS(2000));
-      ESP_LOGI(DIAG_TAG,"Sent %d bytes to node %hhu using WiFi channel %hhu - %s",sendSize,destAddress->devID,channel,status==ESP_NOW_SEND_SUCCESS ? "Success" : "Failed");
+      ESP_LOGI(DIAG_TAG,"Sent %d bytes from DeviceID=%hhu to DeviceID=%hhu using WiFi channel %hhu - %s",sendSize,deviceAddress->devID,destAddress->devID,channel,status==ESP_NOW_SEND_SUCCESS ? "Success" : "Failed");
       delay(10);
     }    
   } while(status!=ESP_NOW_SEND_SUCCESS && (channel=nextChannel(channel))!=startingChannel);
 
   if(status!=ESP_NOW_SEND_SUCCESS)
-    ESP_LOGW(DIAG_TAG,"Node %hhu on Network %hu unreachable",destAddress->devID,deviceAddress->netID);
+    ESP_LOGW(DIAG_TAG,"DeviceID=%hhu on NetworkID=%hu unreachable",destAddress->devID,deviceAddress->netID);
 
   free(msg);
 
@@ -210,7 +212,7 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
 
   HMAC remoteHMAC(SpanCast::mKey,mac,6);
   if(!remoteHMAC.verify(incomingData, len)){
-    ESP_LOGW(DIAG_TAG,"Ignoring unverifiable %d-byte message received from node %d",len,srcAddress->devID);
+    ESP_LOGW(DIAG_TAG,"Ignoring unverifiable %d-byte message received from DeviceID=%hhu",len,srcAddress->devID);
     return;
   }
 
@@ -220,25 +222,25 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
   for(;it!=SpanCasts.end() && memcmp((*it)->peerInfo.peer_addr,mac,6)!=0; it++);
   
   if(it==SpanCasts.end()){
-    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from node %hhu but no matching SpanCast object to receive data",len,srcAddress->devID);
+    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu but no matching SpanCast object to receive data",len,srcAddress->devID);
     return;
   }
 
   if((*it)->receiveSize==0){
-    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from node %hhu but matching SpanCast object not configured to receive data",len,srcAddress->devID);
+    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu but matching SpanCast object is not configured to receive data",len,srcAddress->devID);
     return;
   }
 
   if(len!=(*it)->receiveSize){
-    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from node %hhu but matching SpanCast object expects %d bytes",len,srcAddress->devID,(*it)->receiveSize);
+    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu but matching SpanCast object expects %d bytes",len,srcAddress->devID,(*it)->receiveSize);
     return;
   }
 
   if( ((*it)->overwriteQueue && xQueueOverwrite((*it)->receiveQueue, incomingData)) || xQueueSend((*it)->receiveQueue, incomingData, 0) ){       // overwrite or send to queue immediately
-    ESP_LOGI(DIAG_TAG,"Received %d verified bytes from node %hhu - Queue updated",len,srcAddress->devID);        
+    ESP_LOGI(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu - Queue updated",len,srcAddress->devID);        
     (*it)->receiveTime=millis();                   // set time of receive
   } else {
-    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from node %hhu but Queue is already full",len,srcAddress->devID);        
+    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu but Queue is already full",len,srcAddress->devID);        
   }
 }
 
