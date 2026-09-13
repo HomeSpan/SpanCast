@@ -4,12 +4,11 @@
 
 ///////////////////////////////
 
-void SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
+boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
 
   if(configured){
-    LOG2("\nFATAL ERROR!  SpanCast already configured with Device ID of %hhu! ***\n",deviceID);
-    LOG2("\n=== PROGRAM HALTED ===");
-    while(1);
+    ESP_LOGW(DIAG_TAG,"Duplicate call to configure(%hhu,...) ignored",deviceID);
+    return(false);
   }
 
   #ifdef ARDUINO_ARCH_ESP32
@@ -58,34 +57,52 @@ void SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
 
   spConf.channelMask=cfg.channelMask;                             // save a subset of the config data that will be needed in other functions
   spConf.encrypt=cfg.encrypt;
-  
-  initializeChannels();                                           // verify channel mask and set first channel
-  configured=true;                                                // set configured to true 
+
+  wifi_country_t country;
+  esp_wifi_get_country(&country);
+  spConf.channelMask=spConf.channelMask & ((1<<country.nchan)-1)<<country.schan;     // overlay country-specific mask (e.g. channels 1-11, 1-13, or 1-14 only)  
+
+  EEPROM.begin(1);                                            // read last-saved channel using EEPROM library since it works with both ESP32 and ESP8266
+  uint8_t channel=EEPROM.read(0);
+
+  for(int i=0;i<16;i++,channel=(channel+1)%16){               // loop over all mask bits (starting with saved channel)
+    if(spConf.channelMask & (1<<channel)){                    // if channel is allowed by channel mask
+      esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);   // set the WiFi channel
+      if(i>0){                                                // updated saved channel if needed
+        EEPROM.write(0,channel);
+        EEPROM.commit();
+      }
+      break;                                                  // break out of loop
+    }
+  }
+
+  ESP_LOGI(DIAG_TAG,"Configured as DeviceID=%hhu / NetworkID=%hu / Encryption=%s / ChannelMask=0x%04X.  Initial Channel=%hhu",
+          deviceAddress->devID,deviceAddress->netID,cfg.encrypt?"ON":"OFF",spConf.channelMask,WiFi.channel());
+
+  configured=true;                                                // set configured to true
+  return(true);
 }
 
 ///////////////////////////////
 
 SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, size_t queueDepth){
 
-  if(!configured){
-    LOG2("\nFATAL ERROR!  Can't create new SpanCast(%d,%d,%d,%d) - SpanCast not yet configured! ***\n",deviceID,sendSize,receiveSize,queueDepth);
-    LOG2("\n=== PROGRAM HALTED ===");
-    while(1);
-  }
-
   SpAddress destAddress(deviceID, deviceAddress->netID);
   memcpy(peerInfo.peer_addr,destAddress.mac,6);
+  
+  if(!configured){
+    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - SpanCast not yet configured",deviceID,sendSize,receiveSize,queueDepth);
+    return;
+  }
 
   if(deviceID==deviceAddress->devID || esp_now_is_peer_exist(destAddress.mac)){
-    LOG2("\nFATAL ERROR!  Can't create new SpanCast(%d,%d,%d,%d) - deviceID already used ***\n",deviceID,sendSize,receiveSize,queueDepth);
-    LOG2("\n=== PROGRAM HALTED ===");
-    while(1);
+    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - deviceID already used",deviceID,sendSize,receiveSize,queueDepth);
+    return;
   }
 
   if(sendSize>(ESP_NOW_MAX_DATA_LEN-crypto_auth_BYTES) || receiveSize>(ESP_NOW_MAX_DATA_LEN-crypto_auth_BYTES) || (sendSize==0 && receiveSize==0)){
-    LOG2("\nFATAL ERROR!  Can't create new SpanCast(%d,%d,%d,%d) - invalid send/receive size parameters ***\n",deviceID,sendSize,receiveSize,queueDepth);
-    LOG2("\n=== PROGRAM HALTED ===");
-    while(1);
+    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - invalid send/receive size parameters",deviceID,sendSize,receiveSize,queueDepth);
+    return;
   }
   
   this->sendSize=sendSize;
@@ -118,20 +135,30 @@ SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, size_t
     overwriteQueue=(queueDepth==0);
   }
 
-  SpanCasts.push_back(this);             
+  initialized=true;
+  SpanCasts.push_back(this);
+
+  ESP_LOGI(DIAG_TAG,"Initialized new SpanCast object with DeviceID=%hhu / SendSize=%d / ReceiveSize=%d / QueueDepth=%d",deviceID,sendSize,receiveSize,queueDepth);
 }
 
 ///////////////////////////////
 
 boolean SpanCast::send(const void *data){
 
-  if(sendSize==0)
+  const SpAddress *destAddress = (SpAddress *)peerInfo.peer_addr;
+
+  if(!initialized){
+    ESP_LOGE(DIAG_TAG,"Can't send to DeviceID=%hhu - SpanCast object not initialized",destAddress->devID);
     return(false);
+  }
+
+  if(sendSize==0){
+    ESP_LOGE(DIAG_TAG,"Can't send to DeviceID=%hhu - SpanCast object not configured for sending",destAddress->devID);
+    return(false);
+  }
   
   uint8_t channel = WiFi.channel();
   uint8_t startingChannel=channel;              // set starting channel to current channel
-
-  const SpAddress *destAddress = (SpAddress *)peerInfo.peer_addr;
 
   size_t msgSize=sendSize+crypto_auth_BYTES;                       // size of message with HMAC
   uint8_t *msg=(uint8_t *)malloc(msgSize);                         // allocate new memory reflecting large size
@@ -142,16 +169,15 @@ boolean SpanCast::send(const void *data){
 
   do {
     for(int i=0; status!=ESP_NOW_SEND_SUCCESS && i<3; i++){      
-      LOG2("SpanCast: Sending %d bytes to node %hhu using WiFi channel %hhu... ",sendSize,destAddress->devID,channel);        
       esp_now_send(peerInfo.peer_addr, msg, msgSize);
       xQueueReceive(statusQueue, &status, pdMS_TO_TICKS(2000));
-      LOG2("%s\n",status==ESP_NOW_SEND_SUCCESS ? "Success!" : "Failed.");
+      ESP_LOGI(DIAG_TAG,"Sent %d bytes to node %hhu using WiFi channel %hhu - %s",sendSize,destAddress->devID,channel,status==ESP_NOW_SEND_SUCCESS ? "Success" : "Failed");
       delay(10);
     }    
   } while(status!=ESP_NOW_SEND_SUCCESS && (channel=nextChannel(channel))!=startingChannel);
 
   if(status!=ESP_NOW_SEND_SUCCESS)
-    LOG2("SpanCast: ERROR! Node %hhu on Network %hu unreachable.\n",destAddress->devID,deviceAddress->netID);
+    ESP_LOGW(DIAG_TAG,"Node %hhu on Network %hu unreachable",destAddress->devID,deviceAddress->netID);
 
   free(msg);
 
@@ -161,6 +187,9 @@ boolean SpanCast::send(const void *data){
 ///////////////////////////////
 
 boolean SpanCast::get(void *dataBuf){
+
+  if(!initialized)
+    return(false);
 
   if(receiveSize==0)
     return(false);
@@ -174,73 +203,42 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
 
   const SpAddress *srcAddress = (SpAddress *)mac;
 
-  LOG2("SpanCast: ");
-
   if(!srcAddress->isValid()){
-    LOG2("WARNING! Ignoring %d-byte message received from invalid SpanCast MAC Address %02X:%02X:%02X:%02X:%02X:%02X.\n",len,mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+    ESP_LOGW(DIAG_TAG,"Ignoring %d-byte message received from invalid SpanCast MAC Address %02X:%02X:%02X:%02X:%02X:%02X",len,mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
     return;
   }
 
   HMAC remoteHMAC(SpanCast::mKey,mac,6);
   if(!remoteHMAC.verify(incomingData, len)){
-    LOG2("ERROR! Received unverifiable message of %d bytes from node %d.\n",len,srcAddress->devID);
+    ESP_LOGW(DIAG_TAG,"Ignoring unverifiable %d-byte message received from node %d",len,srcAddress->devID);
     return;
   }
 
   len-=32;
 
-  LOG2("Received %d verified bytes from node %hhu. ",len,srcAddress->devID);        
-
   auto it=SpanCasts.begin();
   for(;it!=SpanCasts.end() && memcmp((*it)->peerInfo.peer_addr,mac,6)!=0; it++);
   
   if(it==SpanCasts.end()){
-    LOG2("ERROR! No matching SpanCast for this node.\n");
+    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from node %hhu but no matching SpanCast object to receive data",len,srcAddress->devID);
     return;
   }
 
   if((*it)->receiveSize==0){
-    LOG2("ERROR! Node not configured for receiving.\n");
+    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from node %hhu but matching SpanCast object not configured to receive data",len,srcAddress->devID);
     return;
   }
 
   if(len!=(*it)->receiveSize){
-    LOG2("ERROR! Number of bytes received does not match %d-byte size of queue.\n",(*it)->receiveSize);
+    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from node %hhu but matching SpanCast object expects %d bytes",len,srcAddress->devID,(*it)->receiveSize);
     return;
   }
 
   if( ((*it)->overwriteQueue && xQueueOverwrite((*it)->receiveQueue, incomingData)) || xQueueSend((*it)->receiveQueue, incomingData, 0) ){       // overwrite or send to queue immediately
-    LOG2("Queue updated.\n");
+    ESP_LOGI(DIAG_TAG,"Received %d verified bytes from node %hhu - Queue updated",len,srcAddress->devID);        
     (*it)->receiveTime=millis();                   // set time of receive
   } else {
-    LOG2("ERROR! Queue full.\n");
-  }
-}
-
-///////////////////////////////
-
-void SpanCast::initializeChannels(){
-
-  wifi_country_t country;
-  esp_wifi_get_country(&country);
-  spConf.channelMask=spConf.channelMask & ((1<<country.nchan)-1)<<country.schan;     // overlay country-specific mask (e.g. channels 1-11, 1-13, or 1-14 only)  
-
-  if(spConf.channelMask==0)
-    return;
-
-  uint8_t channel=0;
-  EEPROM.begin(1);
-  channel=EEPROM.read(0) & 0x0F;
-
-  for(int i=0;i<16;i++,channel=(channel+1)%16){               // loop over all mask bits (starting with saved channel)
-    if(spConf.channelMask & (1<<channel)){                    // if channel is allowed by channel mask
-      if(i>0){
-        EEPROM.write(0,channel);
-        EEPROM.commit();
-      }
-      esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);   // set the WiFi channel
-      return;
-    }
+    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from node %hhu but Queue is already full",len,srcAddress->devID);        
   }
 }
 

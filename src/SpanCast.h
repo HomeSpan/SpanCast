@@ -2,8 +2,6 @@
 #include "Arduino.h"
 #include <vector>
 
-#define LOG2(format,...) Serial.print ##__VA_OPT__(f)(format __VA_OPT__(,) __VA_ARGS__);
-
 #if defined(ARDUINO_ARCH_ESP8266)
   #include "SpanCast8266.h"
 #elif defined(ARDUINO_ARCH_ESP32)
@@ -11,6 +9,8 @@
 #else
   #error ERROR: SPANCAST IS ONLY AVAILABLE FOR ESP32 AND ESP8266 MICROCONTROLLERS!
 #endif
+
+[[maybe_unused]] static const char* DIAG_TAG = "SpanCast";
 
 ///////////////////////////////
 
@@ -50,6 +50,7 @@ class SpanCast {
   QueueHandle_t receiveQueue;                 // queue to store data after it is received
   boolean overwriteQueue;                     // flag to indicate whether receiving queue should be overridden
   uint32_t receiveTime=0;                     // time (in millis) of most recent data received
+  boolean initialized=false;                  // flag to ensure object was properly initialized
 
   static MasterKey *mKey;
   static HMAC *localHMAC;
@@ -63,14 +64,13 @@ class SpanCast {
  
   static void dataReceived(const uint8_t *mac, const uint8_t *incomingData, int len);
   static uint8_t nextChannel(uint8_t channel);
-  static void initializeChannels();
 
   public:
 
   static const uint16_t CHANS_1_11=0x0FFE;
   static const uint16_t CHANS_1_13=0x3FFE;
 
-  static void configure(uint8_t deviceID, SpConfig_t cfg=spConf);
+  static boolean configure(uint8_t deviceID, SpConfig_t cfg=spConf);
   SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize=0, size_t queueDepth=0);
 
   boolean send(const void *data);

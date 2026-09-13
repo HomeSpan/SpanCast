@@ -41,9 +41,8 @@ void setup() {
 
   Serial.printf("\n\nReady.\n\n");
 
-  SpanCast::configure(46,{.network=4,.channelMask=SpanCast::CHANS_1_11});
-    
-  mainDevice=new SpanCast(18,sizeof(float),61);
+  SpanCast::configure(2,{.channelMask=SpanCast::CHANS_1_11});
+  mainDevice=new SpanCast(18,4,48);
 }
 
 //////////////////////
@@ -57,7 +56,10 @@ void loop() {
 
     Serial.printf("Sending Temperature: %f\n",temp);
 
-    mainDevice->send(&temp);
+    if(mainDevice->send(&temp))
+      Serial.printf("Send SUCCEEDED!\n");
+    else
+      Serial.printf("Send FAILED!\n");
 
     temp+=0.5;       // increment the "temperature" by 0.5 C
     if(temp>35.0)

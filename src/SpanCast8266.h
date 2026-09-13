@@ -26,6 +26,20 @@ using esp_now_send_status_t = uint8_t;
 #define WIFI_SECOND_CHAN_NONE 0
 #define esp_wifi_set_channel(channel,channel2)  {wifi_promiscuous_enable(true);wifi_set_channel(channel);wifi_promiscuous_enable(false);}
 
+#ifdef DEBUG_ESP_WIFI
+  #define ESP_LOGE(TAG,format,...) {Serial.printf("[%6d][E][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+  #define ESP_LOGW(TAG,format,...) {Serial.printf("[%6d][W][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+  #define ESP_LOGI(TAG,format,...) {Serial.printf("[%6d][I][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+  #define ESP_LOGD(TAG,format,...) {Serial.printf("[%6d][D][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+  #define ESP_LOGV(TAG,format,...) {Serial.printf("[%6d][V][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+#else
+  #define ESP_LOGE(TAG,format,...) { (void)0; }
+  #define ESP_LOGW(TAG,format,...) { (void)0; }
+  #define ESP_LOGI(TAG,format,...) { (void)0; }
+  #define ESP_LOGD(TAG,format,...) { (void)0; }
+  #define ESP_LOGV(TAG,format,...) { (void)0; }
+#endif
+
 ///////////////////////////////
 
 class MasterKey {
