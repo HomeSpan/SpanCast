@@ -57,6 +57,8 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
 
   spConf.channelMask=cfg.channelMask;                             // save a subset of the config data that will be needed in other functions
   spConf.encrypt=cfg.encrypt;
+  if(cfg.numTries>0)
+    spConf.numTries=cfg.numTries;
 
   wifi_country_t country;
   esp_wifi_get_country(&country);
@@ -170,7 +172,7 @@ boolean SpanCast::send(const void *data){
   esp_now_send_status_t status = ESP_NOW_SEND_FAIL;
 
   do {
-    for(int i=0; status!=ESP_NOW_SEND_SUCCESS && i<3; i++){      
+    for(int i=0; status!=ESP_NOW_SEND_SUCCESS && i<spConf.numTries; i++){      
       esp_now_send(peerInfo.peer_addr, msg, msgSize);
       xQueueReceive(statusQueue, &status, pdMS_TO_TICKS(2000));
       ESP_LOGI(DIAG_TAG,"Sent %d bytes from DeviceID=%hhu to DeviceID=%hhu using WiFi channel %hhu - %s",sendSize,deviceAddress->devID,destAddress->devID,channel,status==ESP_NOW_SEND_SUCCESS ? "Success" : "Failed");

@@ -43,6 +43,7 @@ class SpanCast {
     String password="HomeSpan";
     boolean encrypt=true;
     uint16_t channelMask=0;
+    uint8_t numTries=3;
   };
 
   int receiveSize;                            // size (in bytes) of messages to receive
