@@ -1,6 +1,7 @@
 
 #include "Arduino.h"
 #include <vector>
+#include <initializer_list>
 
 #if defined(ARDUINO_ARCH_ESP8266)
   #include "SpanCast8266.h"
@@ -67,8 +68,19 @@ class SpanCast {
 
   public:
 
-  static const uint16_t CHANS_1_11=0x0FFE;
-  static const uint16_t CHANS_1_13=0x3FFE;
+  static uint16_t range(uint8_t start, uint8_t end){
+    uint16_t mask=0;
+    for(int i=start;i<=end;i++)
+      mask|=(1<<i);
+    return(mask);
+  }
+
+  static uint16_t list(std::initializer_list<uint8_t> list){
+    uint16_t mask=0;
+    for(uint8_t i : list)
+      mask|=(1<<i);
+    return(mask);
+  }
 
   static boolean configure(uint8_t deviceID, SpConfig_t cfg=spConf);
   SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize=0, size_t queueDepth=0);

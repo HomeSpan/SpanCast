@@ -41,14 +41,14 @@ void setup() {
 
   Serial.printf("\n\nReady.\n\n");
 
-  SpanCast::configure(2,{.channelMask=SpanCast::CHANS_1_11});
+  SpanCast::configure(2,{.channelMask=SpanCast::range(1,11)});
   mainDevice=new SpanCast(18,4,48);
 }
 
 //////////////////////
 
 uint32_t aTime=0;
-uint8_t msgData[61];
+uint8_t msgData[48];
 
 void loop() {
 
