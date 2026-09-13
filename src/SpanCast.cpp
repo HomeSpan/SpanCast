@@ -103,7 +103,7 @@ SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, size_t
     return;
   }
 
-  if(sendSize>(ESP_NOW_MAX_DATA_LEN-crypto_auth_BYTES) || receiveSize>(ESP_NOW_MAX_DATA_LEN-crypto_auth_BYTES) || (sendSize==0 && receiveSize==0)){
+  if(sendSize>(ESP_NOW_MAX_DATA_LEN-sizeof(lastMessageID)) || receiveSize>(ESP_NOW_MAX_DATA_LEN-sizeof(lastMessageID)) || (sendSize==0 && receiveSize==0)){
     ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - invalid send/receive size parameters",deviceID,sendSize,receiveSize,queueDepth);
     return;
   }
