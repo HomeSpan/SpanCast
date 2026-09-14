@@ -38,6 +38,8 @@ class SpanCast {
     }
   };
 
+  public: 
+
   struct SpConfig_t {
     uint16_t network=1;
     String password="HomeSpan";
@@ -45,6 +47,8 @@ class SpanCast {
     uint16_t channelMask=0;
     uint8_t numTries=3;
   };
+
+  private:
 
   int receiveSize;                            // size (in bytes) of messages to receive
   int sendSize;                               // size (in bytes) of messages to send
