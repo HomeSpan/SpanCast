@@ -29,8 +29,13 @@
   
 ///////////////////////////////
 
-SpanCast *mainDevice;
-float temp=-10.0;         // this global variable represents our "simulated" temperature (in degrees C)
+SpanCast *mainDevice;     // pointer to SpanCast connection to Main (HomeSpan) Device
+float temp=-10.0;         // variable to store our "simulated" temperature (in degrees C)
+
+#define THIS_DEVICE_NAME    "Outdoor Temperature Sensor"
+
+#define THIS_DEVICE_ID      2     // SpanCast Device ID configured for THIS Device
+#define MAIN_DEVICE_ID      18    // SpanCast Device ID of the MAIN Device to which this device sends (and optionally receives) messages
 
 //////////////////////
 
@@ -39,25 +44,28 @@ void setup() {
   Serial.begin(115200);
   delay(1000); 
 
-  Serial.printf("\n\nReady.\n\n");
+  Serial.printf("\n\n%s Ready.\n\n",THIS_DEVICE_NAME);
 
-  SpanCast::configure(2,{.channelMask=SpanCast::CHANS_1_11});
+  SpanCast::configure(THIS_DEVICE_ID,{.channelMask=SpanCast::range(1,11)});
     
-  mainDevice=new SpanCast(18,sizeof(float),48);
+  mainDevice=new SpanCast(MAIN_DEVICE_ID,sizeof(float),48);
 }
 
 //////////////////////
 
 uint32_t aTime=0;
-uint8_t msgData[61];
+uint8_t msgData[48];
 
 void loop() {
 
   if(millis()-aTime>5000){
 
-    Serial.printf("Sending Temperature: %f\n",temp);
+    Serial.printf("Sending Temperature: %0.1f °F\n",temp*9/5+32);
 
-    mainDevice->send(&temp);
+    if(mainDevice->send(&temp))
+      Serial.printf("Send Succeeded\n");
+    else
+      Serial.printf("Send Failed\n");
 
     temp+=0.5;       // increment the "temperature" by 0.5 C
     if(temp>35.0)
@@ -68,6 +76,4 @@ void loop() {
 
   if(mainDevice->get(msgData))
     Serial.printf("Message Received = '%s'\n",msgData);
-
-
 }

@@ -1,7 +1,7 @@
 /*********************************************************************************
  *  MIT License
  *  
- *  Copyright (c) 2020-2022 Gregg E. Berman
+ *  Copyright (c) 2020-2026 Gregg E. Berman
  *  
  *  https://github.com/HomeSpan/HomeSpan
  *  
@@ -30,65 +30,81 @@
 //    HomeSpan: A HomeKit implementation for the ESP32    //
 //    ------------------------------------------------    //
 //                                                        //
-//     Demonstrates how to use SpanCast() to implement   //
-//     two remote temperature sensors on separate ESP32   //
+//     Demonstrates how to use SpanCast() to implement    //
+//     two remote temperature sensors on standalone       //
+//     ESP32 or ESP8266 devices.                          //
+//                                                        //
+//     This sketch is for the main HomeSpan Device that   //
+//     contains all the usual HomeSpan logic, plus two    //
+//     instances of SpanCast to read and write messages   //
+//     (from and to) the two remote temperature-sensing   //
 //     devices.                                           //
 //                                                        //
-//     This sketch is for the MAIN DEVICE that contains   //
-//     all the usual HomeSpan logic, plus two instances   //
-//     of SpanCast to read temperatures from two other   //
-//     remote devices.                                    //
-//                                                        //
+//     Sketches for these remote devices can be found in  //
+//     the IndoorTempSensor and OutdoorTempSensor         //
+//     examples.                                          //
+//                                                        //   
 ////////////////////////////////////////////////////////////
 
-#include "HomeSpan.h"
-#include "SpanCast.h"
+#include "HomeSpan.h"             // include HomeSpan as usual
+
+#include "SpanCast.h"             // MUST ALSO INCLUDE THE SPANCAST LIBRARY!
+
+//////////////////////////////////////
 
 struct RemoteTempSensor : Service::TemperatureSensor {
 
   SpanCharacteristic *temp;
-  SpanCharacteristic *fault;
+  SpanCharacteristic *active;
   SpanCast *remoteTemp;
-  const char *name;
-  float temperature;
-  char msg[61];
+  char *deviceName;
   uint32_t timer=0;
   
   RemoteTempSensor(const char *name, uint8_t deviceID) : Service::TemperatureSensor(){
 
-    this->name=name;
+    asprintf(&deviceName,"%s",name);                         // save name for diagnostic reporting
     
-    temp=new Characteristic::CurrentTemperature(-10.0);      // set initial temperature
-    temp->setRange(-50,100);                                 // expand temperature range to allow negative values
+    temp=new Characteristic::CurrentTemperature(-10.0);      // create Temperature Characteristic and set initial temperature to -10 Celsius
+    temp->setRange(-50,100);                                 // remember to expand the allowed temperature range to include negative values
 
-    fault=new Characteristic::StatusFault(1);                // set initial state = fault
+    active=new Characteristic::StatusActive(0);              // create Active Characteristic and set initial state to false
 
-    remoteTemp=new SpanCast(deviceID,61,sizeof(float));    // create a SpanCast with receive size=sizeof(float)
+    // Configure a SpanCast connection to send an arbitrary message of up to 48 bytes to the remote device,
+    // as well as receive a 4-byte message containing the remote device temperature (as a float).  Receipt
+    // of the temperature FROM the remote device is of course the purpose of the sketch.  Sending of an
+    // arbitrary message TO the remote device serves no practical purpose and is only included in this sketch
+    // to show an example of how to both send and receive messages to and from a remote device.
+
+    remoteTemp=new SpanCast(deviceID,48,sizeof(float));      // create a SpanCast with ID=deviceID (passed as a parameter below), send size=48, and receive size=sizeof(float)
 
   } // end constructor
 
   void loop(){
+
+    float temperature;
        
-    if(remoteTemp->get(&temperature)){      // if there is data from the remote sensor
-      temp->setVal(temperature);            // update temperature
-      fault->setVal(0);                     // clear fault
+    if(remoteTemp->get(&temperature)){      // try to read temperature data from the remote sensor
+      temp->setVal(temperature);            // if a message is available, update the temperature characteristic
+      active->setVal(1);                    // and set Active to true
        
-      LOG1("Sensor %s update: Temperature=%0.2f\n",name,temperature*9/5+32);
+      LOG1("Sensor %s update: Temperature=%0.1f °F\n",deviceName,temperature*9/5+32);
       
-    } else if(remoteTemp->time()>60000 && !fault->getVal()){    // else if it has been a while since last update (60 seconds), and there is no current fault
-      fault->setVal(1);                                         // set fault state
-      LOG1("Sensor %s update: FAULT\n",name);
+    } else if(remoteTemp->time()>60000 && active->getVal()){     // else if it has been a while since last update (60 seconds), and the sensor is Active
+      active->setVal(0);                                         // set Active to false
+      LOG1("Sensor %s update: NOT ACTIVE\n",deviceName);
     }
 
-    if(millis()>timer+10000){
+    if(millis()-timer>12000 && active->getVal()){                // every 12 seconds, send an arbitrary message (max 48 bytes) back to remote sensor (for illustrative purposes only)
       timer=millis();
-      sprintf(msg,"TEMP IS %0.1f DEGREES!",temperature*9/5+32);
-      Serial.printf("Sending: %s\n",msg);
-      remoteTemp->send(msg);
-    }
-    
+      char msg[48];
+      sprintf(msg,"Confirming your temp is %0.1f °F!",temp->getVal<float>()*9/5+32);
+      LOG1("Sending to %s: '%s'\n",deviceName,msg);
+      if(remoteTemp->send(msg))
+        LOG1("Send Succeeded\n");
+      else
+        LOG1("Send Failed\n");
+    }  
   } // loop
-  
 };
 
 //////////////////////////////////////
@@ -97,13 +113,11 @@ void setup() {
   
   Serial.begin(115200);
 
-  homeSpan.setLogLevel(2);
+  homeSpan.setLogLevel(1);
 
-  delay(1000);
+  // Configure SpanCast to use Device ID = 18.  Defaults will be used for all other SpanCast settings
 
-  SpanCast::configure(18,{.numTries=8});
-
-  Serial.printf("\nAP MAC: %s\n",WiFi.softAPmacAddress().c_str());
+  SpanCast::configure(18);
 
   homeSpan.begin(Category::Bridges,"Sensor Hub");
 
@@ -115,14 +129,13 @@ void setup() {
     new Service::AccessoryInformation();
       new Characteristic::Identify();
       new Characteristic::Name("Indoor Temp");
-    new RemoteTempSensor("Device 1",46);
+    new RemoteTempSensor("Indoor Temp",46);               // create remote sensor "Indoor Temp" with SpanCast Device ID = 46
 
   new SpanAccessory();
     new Service::AccessoryInformation();
       new Characteristic::Identify(); 
       new Characteristic::Name("Outdoor Temp");
-    new RemoteTempSensor("Device 2",2);
-
+    new RemoteTempSensor("Outdoor Temp",2);               // create remote sensor "Indoor Temp" with SpanCast Device ID = 2
   
 } // end of setup()
 
