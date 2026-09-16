@@ -3,7 +3,7 @@
  *  
  *  Copyright (c) 2026 Gregg E. Berman
  *  
- *  https://github.com/HomeSpan/HomeSpan
+ *  https://github.com/HomeSpan/SpanCast
  *  
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
