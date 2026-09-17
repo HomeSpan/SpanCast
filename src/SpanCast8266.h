@@ -1,3 +1,4 @@
+
 /*********************************************************************************
  *  MIT License
  *  
@@ -33,9 +34,9 @@
 
 #define pdMS_TO_TICKS(N) (N)
 
-static const int ESP_NOW_KEY_LEN        = 16;
-static const int crypto_auth_BYTES      = 32;
-static const int ESP_NOW_MAX_DATA_LEN   = 250;
+static const int ESP_NOW_KEY_LEN          = 16;
+static const int crypto_auth_BYTES        = 32;
+static const int ESP_NOW_MAX_DATA_LEN_V2  = 250;
 
 enum {
   ESP_NOW_SEND_SUCCESS,

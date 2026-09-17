@@ -1,3 +1,4 @@
+
 /*********************************************************************************
  *  MIT License
  *  
@@ -100,6 +101,8 @@ class SpanCast {
   static uint8_t nextChannel(uint8_t channel);
 
   public:
+
+  static const int MAX_MESSAGE_SIZE = ESP_NOW_MAX_DATA_LEN_V2-crypto_auth_BYTES-sizeof(uint32_t);
 
   static uint16_t range(uint8_t start, uint8_t end){
     uint16_t mask=0;

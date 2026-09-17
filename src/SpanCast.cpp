@@ -1,3 +1,4 @@
+
 /*********************************************************************************
  *  MIT License
  *  
@@ -129,10 +130,15 @@ SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, size_t
     return;
   }
 
-  if(sendSize>(ESP_NOW_MAX_DATA_LEN-sizeof(lastMessageID)) || receiveSize>(ESP_NOW_MAX_DATA_LEN-sizeof(lastMessageID)) || (sendSize==0 && receiveSize==0)){
-    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - invalid send/receive size parameters",deviceID,sendSize,receiveSize,queueDepth);
+  if(sendSize>MAX_MESSAGE_SIZE || receiveSize>MAX_MESSAGE_SIZE){
+    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - either send or receive size exceeds %d-byte maximum",deviceID,sendSize,receiveSize,queueDepth,MAX_MESSAGE_SIZE);
     return;
   }
+
+  if(sendSize==0 && receiveSize==0){
+    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - both send and receive size are zero",deviceID,sendSize,receiveSize,queueDepth);
+    return;
+  }  
   
   this->sendSize=sendSize;
   this->receiveSize=receiveSize;
