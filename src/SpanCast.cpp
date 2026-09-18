@@ -281,7 +281,7 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
 
   if( ((*it)->overwriteQueue && xQueueOverwrite((*it)->receiveQueue, incomingData)) || xQueueSend((*it)->receiveQueue, incomingData, 0) ){       // overwrite or send to queue immediately
     ESP_LOGI(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu - Queue updated",len,srcAddress->devID);        
-    (*it)->receiveTime=millis();                   // set time of receive
+    (*it)->receiveTime=millis();
   } else {
     ESP_LOGW(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu but Queue is already full",len,srcAddress->devID);        
   }

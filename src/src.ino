@@ -43,12 +43,6 @@ void setup() {
 
   SpanCast::configure(2,{.password="HomeSpan",.channelMask=SpanCast::range(1,11)});
   mainDevice=new SpanCast(18,4,48);
-  SpanCast(12,215,48);
-  SpanCast(33,4,1435);
-  SpanCast(36,0);
-
-while(1)
-  delay(1000);
 }
 
 //////////////////////
