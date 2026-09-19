@@ -43,8 +43,8 @@ void setup() {
     uint8_t humidity=30;
   } tempHum;
 
-  uint8_t windSpeed=0;
-  char barometerMessage[64]="No Reading";
+  uint8_t windSpeed;
+  char barometerMessage[64];
 
   Serial.printf("\n\nTemperature and Humidity Sensor Ready.\n\n");
 
@@ -81,7 +81,18 @@ void setup() {
       else
         Serial.printf("Failed\n");
 
-      Serial.printf("***\n*** Current Conditions: Temperature = %0.1fC, Humidity = %d%%, Wind = %d km/hr, Barometer = %s\n***\n",tempHum.temperature,tempHum.humidity,windSpeed,barometerMessage);
+      Serial.printf("\n---------------------------\n");
+      Serial.printf("Temperature:  %0.1fC\n",tempHum.temperature);
+      Serial.printf("Humidity:     %d%%\n",tempHum.humidity);
+      if(windSpeedSensor.isActive())
+        Serial.printf("Wind Speed:   %d km/hr\n",windSpeed);
+      else
+        Serial.printf("Wind Speed:   ---\n");
+      if(barometerSensor.isActive())
+        Serial.printf("Barometer:    %s\n",barometerMessage);
+      else
+        Serial.printf("Barometer:    ---\n");
+      Serial.printf("---------------------------\n\n");
 
       updateTime=millis();        
     }

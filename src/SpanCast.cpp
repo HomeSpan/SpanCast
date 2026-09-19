@@ -282,6 +282,7 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
   if( ((*it)->overwriteQueue && xQueueOverwrite((*it)->receiveQueue, incomingData)) || xQueueSend((*it)->receiveQueue, incomingData, 0) ){       // overwrite or send to queue immediately
     ESP_LOGI(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu - Queue updated",len,srcAddress->devID);        
     (*it)->receiveTime=millis();
+    (*it)->active=true;
   } else {
     ESP_LOGW(DIAG_TAG,"Received %d verified bytes from DeviceID=%hhu but Queue is already full",len,srcAddress->devID);        
   }
@@ -305,6 +306,15 @@ uint8_t SpanCast::nextChannel(uint8_t channel){
   EEPROM.commit();  
      
   return(channel);  
+}
+
+///////////////////////////////
+
+boolean SpanCast::isActive(){
+
+  if(active && (millis()-receiveTime) > 30000)
+    active=false;
+  return(active);
 }
 
 ///////////////////////////////

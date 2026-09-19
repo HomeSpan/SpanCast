@@ -82,7 +82,8 @@ class SpanCast {
   esp_now_peer_info_t peerInfo;               // structure for all ESP-NOW peer data
   QueueHandle_t receiveQueue;                 // queue to store data after it is received
   boolean overwriteQueue;                     // flag to indicate whether receiving queue should be overridden
-  uint32_t receiveTime=0;                     // time (in millis) of most recent data received
+  uint32_t receiveTime;                       // time (in millis) of most recent data received
+  boolean active=false;                       // flag to check if data has been received within a pre-specified period of time
   boolean initialized=false;                  // flag to ensure object was properly initialized
 
   uint8_t lastMessageID[crypto_auth_BYTES+sizeof(uint32_t)];     // formed from last 4-byte random nonce and 32-byte HMAC to check for duplicate transmissions
@@ -119,11 +120,10 @@ class SpanCast {
   }
 
   static boolean configure(uint8_t deviceID, SpConfig_t cfg=spConf);
-  SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize=0, size_t queueDepth=0);
+  SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, size_t queueDepth=0);
 
   boolean send(const void *data);
   boolean get(void *dataBuf);
-
-  uint32_t time(){return(millis()-receiveTime);}
+  boolean isActive();
 };
 
