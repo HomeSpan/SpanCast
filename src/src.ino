@@ -42,7 +42,7 @@ void setup() {
   Serial.printf("\n\nReady.\n\n");
 
   SpanCast::configure(2,{.password="HomeSpan",.channelMask=SpanCast::range(1,11)});
-  mainDevice=new SpanCast(18,4,48);
+  mainDevice=new SpanCast(18,4,48,{.timeout=5});
 }
 
 //////////////////////

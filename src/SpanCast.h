@@ -75,6 +75,11 @@ class SpanCast {
     uint8_t numTries=3;
   };
 
+  struct SpCast_t {
+    size_t queueDepth=0;
+    uint32_t timeout=60000;
+  };
+
   private:
 
   int receiveSize;                            // size (in bytes) of messages to receive
@@ -85,6 +90,8 @@ class SpanCast {
   uint32_t receiveTime;                       // time (in millis) of most recent data received
   boolean active=false;                       // flag to check if data has been received within a pre-specified period of time
   boolean initialized=false;                  // flag to ensure object was properly initialized
+  SpCast_t spCast;                            // stores optional connection-specific settings
+  static SpCast_t spCastDefault;              // default spCast object
 
   uint8_t lastMessageID[crypto_auth_BYTES+sizeof(uint32_t)];     // formed from last 4-byte random nonce and 32-byte HMAC to check for duplicate transmissions
 
@@ -95,7 +102,7 @@ class SpanCast {
 
   static QueueHandle_t statusQueue;           // queue for communication between SpanCast::dataSend and SpanCast::send
   static SpAddress *deviceAddress;            // SpanCast Address of this device (will be used for AP Mac)
-  static SpConfig_t spConf;                   // stores all configuration settings
+  static SpConfig_t spConf;                   // stores optional global configuration settings
   static boolean configured;                  // flag indicating SpanCast has been configured
  
   static void dataReceived(const uint8_t *mac, const uint8_t *incomingData, int len);
@@ -120,7 +127,7 @@ class SpanCast {
   }
 
   static boolean configure(uint8_t deviceID, SpConfig_t cfg=spConf);
-  SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, size_t queueDepth=0);
+  SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, SpCast_t settings=spCastDefault);
 
   boolean send(const void *data);
   boolean get(void *dataBuf);

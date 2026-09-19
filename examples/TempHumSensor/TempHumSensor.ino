@@ -31,6 +31,8 @@
 #define WIND_SPEED_DEVICE_ID    2   // SpanCast Device ID for the Wind Speed Sensor
 #define BAROMETER_DEVICE_ID     3   // SpanCast Device ID for the Barometric Pressure Sensor
 
+#define UPDATE_FREQUENCY     5000   // how frequently (in millseconds) for this device to send out updates
+
 //////////////////////
 
 void setup() {
@@ -57,7 +59,7 @@ void setup() {
 
   while(1){
 
-    if(millis()-updateTime > 5000){
+    if(millis()-updateTime > UPDATE_FREQUENCY){
 
       tempHum.temperature+=0.6;
       tempHum.humidity++;

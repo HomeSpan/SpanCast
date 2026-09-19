@@ -115,33 +115,34 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
 
 ///////////////////////////////
 
-SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, size_t queueDepth){
+SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, SpCast_t settings){
 
   SpAddress destAddress(deviceID, deviceAddress->netID);
   memcpy(peerInfo.peer_addr,destAddress.mac,6);
   
   if(!configured){
-    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - SpanCast not yet configured",deviceID,sendSize,receiveSize,queueDepth);
+    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d...) object - SpanCast not yet configured",deviceID,sendSize,receiveSize);
     return;
   }
 
   if(deviceID==deviceAddress->devID || esp_now_is_peer_exist(destAddress.mac)){
-    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - deviceID already used",deviceID,sendSize,receiveSize,queueDepth);
+    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d...) object - deviceID already used",deviceID,sendSize,receiveSize);
     return;
   }
 
   if(sendSize>MAX_MESSAGE_SIZE || receiveSize>MAX_MESSAGE_SIZE){
-    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - either send or receive size exceeds %d-byte maximum",deviceID,sendSize,receiveSize,queueDepth,MAX_MESSAGE_SIZE);
+    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d) object - either send or receive size exceeds %d-byte maximum",deviceID,sendSize,receiveSize,MAX_MESSAGE_SIZE);
     return;
   }
 
   if(sendSize==0 && receiveSize==0){
-    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d,%d) object - both send and receive size are zero",deviceID,sendSize,receiveSize,queueDepth);
+    ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d...) object - both send and receive size are zero",deviceID,sendSize,receiveSize);
     return;
   }  
   
   this->sendSize=sendSize;
   this->receiveSize=receiveSize;
+  spCast=settings;
 
   uint8_t lmk[ESP_NOW_KEY_LEN];
   char *keyContext;
@@ -166,14 +167,14 @@ SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, size_t
   #endif
 
   if(receiveSize>0){
-    receiveQueue = xQueueCreate(queueDepth>0?queueDepth:1,receiveSize);
-    overwriteQueue=(queueDepth==0);
+    receiveQueue = xQueueCreate(spCast.queueDepth>0?spCast.queueDepth:1,receiveSize);
+    overwriteQueue=(spCast.queueDepth==0);
   }
 
   initialized=true;
   SpanCasts.push_back(this);
 
-  ESP_LOGI(DIAG_TAG,"Initialized new SpanCast object with DeviceID=%hhu / SendSize=%d / ReceiveSize=%d / QueueDepth=%d.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X",deviceID,sendSize,receiveSize,queueDepth,
+  ESP_LOGI(DIAG_TAG,"Initialized new SpanCast object with DeviceID=%hhu / SendSize=%d / ReceiveSize=%d / QueueDepth=%d.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X",deviceID,sendSize,receiveSize,spCast.queueDepth,
           destAddress.mac[0],destAddress.mac[1],destAddress.mac[2],destAddress.mac[3],destAddress.mac[4],destAddress.mac[5]);
 }
 
@@ -312,7 +313,7 @@ uint8_t SpanCast::nextChannel(uint8_t channel){
 
 boolean SpanCast::isActive(){
 
-  if(active && (millis()-receiveTime) > 30000)
+  if(active && (millis()-receiveTime) > spCast.timeout)
     active=false;
   return(active);
 }
@@ -323,6 +324,7 @@ std::vector<SpanCast *> SpanCast::SpanCasts;
 QueueHandle_t SpanCast::statusQueue;
 SpanCast::SpAddress *SpanCast::deviceAddress=NULL;
 SpanCast::SpConfig_t SpanCast::spConf{};
+SpanCast::SpCast_t SpanCast::spCastDefault{};
 boolean SpanCast::configured=false;
 MasterKey *SpanCast::mKey;
 HMAC *SpanCast::localHMAC;
