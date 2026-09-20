@@ -38,6 +38,10 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
     return(false);
   }
 
+  spConf=cfg;                       // save config data  
+  if(spConf.numTries==0)            // if numTries was set to 0, reset it to 1
+    spConf.numTries=1;
+
   #ifdef ARDUINO_ARCH_ESP32
     WiFi.mode(WIFI_AP_STA);
   #else
@@ -45,7 +49,7 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
   #endif
 
   delay(10);
-  deviceAddress = new SpAddress(deviceID,cfg.network);
+  deviceAddress = new SpAddress(deviceID,spConf.network);
 
   #ifdef ARDUINO_ARCH_ESP32
     esp_wifi_set_mac(WIFI_IF_AP, deviceAddress->mac);
@@ -55,7 +59,7 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
 
   esp_now_init();
 
-  mKey = new MasterKey(cfg.password.c_str(),"SpanCast");
+  mKey = new MasterKey(spConf.password.c_str(),"SpanCast");
 
   uint8_t pmk[ESP_NOW_KEY_LEN];
   mKey->create("Key for PMK",pmk,ESP_NOW_KEY_LEN); 
@@ -82,11 +86,6 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
   statusQueue = xQueueCreate(1,sizeof(esp_now_send_status_t));    // create statusQueue even if not needed
   localHMAC = new HMAC(mKey,deviceAddress->mac,6);                // create authentication key for the MAC of this device
 
-  spConf.channelMask=cfg.channelMask;                             // save a subset of the config data that will be needed in other functions
-  spConf.encrypt=cfg.encrypt;
-  if(cfg.numTries>0)
-    spConf.numTries=cfg.numTries;
-
   wifi_country_t country;
   esp_wifi_get_country(&country);
   spConf.channelMask=spConf.channelMask & ((1<<country.nchan)-1)<<country.schan;     // overlay country-specific mask (e.g. channels 1-11, 1-13, or 1-14 only)  
@@ -106,7 +105,7 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
   }
 
   ESP_LOGI(DIAG_TAG,"Configured as DeviceID=%hhu / NetworkID=%hu / Encryption=%s / ChannelMask=0x%04X.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X.  Initial Channel=%hhu",
-          deviceAddress->devID,deviceAddress->netID,cfg.encrypt?"ON":"OFF",spConf.channelMask,
+          deviceAddress->devID,deviceAddress->netID,spConf.encrypt?"ON":"OFF",spConf.channelMask,
           deviceAddress->mac[0],deviceAddress->mac[1],deviceAddress->mac[2],deviceAddress->mac[3],deviceAddress->mac[4],deviceAddress->mac[5],WiFi.channel());
 
   configured=true;                                                // set configured to true
@@ -158,12 +157,21 @@ SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, SpCast
     peerInfo.ifidx=WIFI_IF_AP;                      // specify interface as AP
     peerInfo.encrypt=spConf.encrypt;                // set encryption for this peer
     memcpy(peerInfo.lmk,lmk,ESP_NOW_KEY_LEN);       // set LMK for this peer
-    esp_now_add_peer(&peerInfo);                    // add peer to ESP-NOW
+
+    if(esp_now_add_peer(&peerInfo) == ESP_ERR_ESPNOW_FULL){      // add peer to ESP-NOW
+      ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d...) object - maximum number of SpanCast instances (%d) exceeded",deviceID,sendSize,receiveSize,SpanCasts.size());
+      return;
+    }
   #else
+    int status;
     if(spConf.encrypt)
-      esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, lmk, ESP_NOW_KEY_LEN);
+      status=esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, lmk, ESP_NOW_KEY_LEN);
     else
-      esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, NULL, 0);
+      status=esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, NULL, 0);
+    if(status!=0){
+      ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d...) object - maximum number of SpanCast instances (%d) exceeded",deviceID,sendSize,receiveSize,SpanCasts.size());
+      return;
+    }
   #endif
 
   if(receiveSize>0){
