@@ -41,15 +41,10 @@ void setup() {
 
   Serial.printf("\n\nReady.\n\n");
 
-  SpanCast::configure(0,{.password="HomeSpan",.channelMask=SpanCast::range(1,11)});
+  SpanCast::configure(0,{.password="HomeSpan",.encrypt=false,.channelMask=SpanCast::range(1,11)});
 
-  for(int i=1;i<30;i++){
-    SpanCast spc(i,10,5,{.queueDepth=2*i});
-    if(spc)
-      Serial.printf("SUCCESS!\n");
-    if(!spc)
-      Serial.printf("FAIL!\n");
-  }
+  for(int i=1;i<30;i++)
+    new SpanCast(i,0,20,{.encrypt=true});
 
   while(1){delay(1000);}
 

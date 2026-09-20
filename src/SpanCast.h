@@ -78,6 +78,7 @@ class SpanCast {
   };
 
   struct SpCast_t {
+    boolean encrypt=false;
     size_t queueDepth=0;
     uint32_t timeout=60000;
 

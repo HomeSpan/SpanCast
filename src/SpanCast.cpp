@@ -104,8 +104,8 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
     }
   }
 
-  ESP_LOGI(DIAG_TAG,"Configured as DeviceID=%hhu / NetworkID=%hu / Encryption=%s / ChannelMask=0x%04X.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X.  Initial Channel=%hhu",
-          deviceAddress->devID,deviceAddress->netID,spConf.encrypt?"ON":"OFF",spConf.channelMask,
+  ESP_LOGI(DIAG_TAG,"Configured as DeviceID=%hhu / NetworkID=%hu / ChannelMask=0x%04X.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X.  Initial Channel=%hhu",
+          deviceAddress->devID,deviceAddress->netID,spConf.channelMask,
           deviceAddress->mac[0],deviceAddress->mac[1],deviceAddress->mac[2],deviceAddress->mac[3],deviceAddress->mac[4],deviceAddress->mac[5],WiFi.channel());
 
   configured=true;                                                // set configured to true
@@ -141,38 +141,40 @@ SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, SpCast
   
   this->sendSize=sendSize;
   this->receiveSize=receiveSize;
-  spCast=settings;
 
-  uint8_t lmk[ESP_NOW_KEY_LEN];
-  char *keyContext;
-  asprintf(&keyContext,"Key for LMK: NetID=%hu DevID1=%hhu DevID2=%hhu",deviceAddress->netID,
-            deviceID<(deviceAddress->devID)?deviceID:deviceAddress->devID,
-            deviceID>(deviceAddress->devID)?deviceID:deviceAddress->devID);
+  spCast=settings;                        // save settings data
+  spCast.encrypt|=spConf.encrypt;         // overlay class-level encryption requirement
 
-  SpanCast::mKey->create(keyContext,lmk,ESP_NOW_KEY_LEN);
-  free(keyContext);
+  if(spCast.encrypt || sendSize>0) {      // if encryption is on, or it's not but sending is configured, create a peer
+    uint8_t lmk[ESP_NOW_KEY_LEN];
+    char *keyContext;
+    asprintf(&keyContext,"Key for LMK: NetID=%hu DevID1=%hhu DevID2=%hhu",deviceAddress->netID,
+              deviceID<(deviceAddress->devID)?deviceID:deviceAddress->devID,
+              deviceID>(deviceAddress->devID)?deviceID:deviceAddress->devID);
 
-  #ifdef ARDUINO_ARCH_ESP32
-    peerInfo.channel=0;                             // 0 = matches current WiFi channel
-    peerInfo.ifidx=WIFI_IF_AP;                      // specify interface as AP
-    peerInfo.encrypt=spConf.encrypt;                // set encryption for this peer
-    memcpy(peerInfo.lmk,lmk,ESP_NOW_KEY_LEN);       // set LMK for this peer
+    SpanCast::mKey->create(keyContext,lmk,ESP_NOW_KEY_LEN);
+    free(keyContext);
 
-    if(esp_now_add_peer(&peerInfo) == ESP_ERR_ESPNOW_FULL){      // add peer to ESP-NOW
-      ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d...) object - maximum number of SpanCast instances (%d) exceeded",deviceID,sendSize,receiveSize,SpanCasts.size());
-      return;
-    }
-  #else
     int status;
-    if(spConf.encrypt)
-      status=esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, lmk, ESP_NOW_KEY_LEN);
-    else
-      status=esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, NULL, 0);
+
+    #ifdef ARDUINO_ARCH_ESP32
+      peerInfo.channel=0;                             // 0 = matches current WiFi channel
+      peerInfo.ifidx=WIFI_IF_AP;                      // specify interface as AP
+      peerInfo.encrypt=spCast.encrypt;                // set encryption for this peer
+      memcpy(peerInfo.lmk,lmk,ESP_NOW_KEY_LEN);       // set LMK for this peer
+      status=esp_now_add_peer(&peerInfo);             // add peer to ESP-NOW
+    #else
+      if(spCast.encrypt)
+        status=esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, lmk, ESP_NOW_KEY_LEN);
+      else
+        status=esp_now_add_peer(peerInfo.peer_addr, ESP_NOW_ROLE_COMBO, 0, NULL, 0);
+    #endif
+
     if(status!=0){
-      ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d...) object - maximum number of SpanCast instances (%d) exceeded",deviceID,sendSize,receiveSize,SpanCasts.size());
+      ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d...) object - failed to create ESP-NOW peer",deviceID,sendSize,receiveSize);
       return;
     }
-  #endif
+  }
 
   if(receiveSize>0){
     receiveQueue = xQueueCreate(spCast.queueDepth>0?spCast.queueDepth:1,receiveSize);
@@ -182,8 +184,8 @@ SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, SpCast
   initialized=true;
   SpanCasts.push_back(this);
 
-  ESP_LOGI(DIAG_TAG,"Initialized new SpanCast object with DeviceID=%hhu / SendSize=%d / ReceiveSize=%d / QueueDepth=%d.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X",deviceID,sendSize,receiveSize,spCast.queueDepth,
-          destAddress.mac[0],destAddress.mac[1],destAddress.mac[2],destAddress.mac[3],destAddress.mac[4],destAddress.mac[5]);
+  ESP_LOGI(DIAG_TAG,"Initialized new SpanCast object with DeviceID=%hhu / SendSize=%d / ReceiveSize=%d / QueueDepth=%d / Encryption=%s.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X",deviceID,sendSize,receiveSize,spCast.queueDepth,
+          spCast.encrypt?"TRUE":"False",destAddress.mac[0],destAddress.mac[1],destAddress.mac[2],destAddress.mac[3],destAddress.mac[4],destAddress.mac[5]);
 }
 
 ///////////////////////////////
