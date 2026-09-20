@@ -73,11 +73,15 @@ class SpanCast {
     boolean encrypt=true;
     uint16_t channelMask=0;
     uint8_t numTries=3;
+
+    static SpConfig_t getDefault(){return(SpConfig_t{});}
   };
 
   struct SpCast_t {
     size_t queueDepth=0;
     uint32_t timeout=60000;
+
+    static SpCast_t getDefault(){return(SpCast_t{});}
   };
 
   private:
@@ -91,7 +95,6 @@ class SpanCast {
   boolean active=false;                       // flag to check if data has been received within a pre-specified period of time
   boolean initialized=false;                  // flag to ensure object was properly initialized
   SpCast_t spCast;                            // stores optional connection-specific settings
-  static SpCast_t spCastDefault;              // default spCast object
 
   uint8_t lastMessageID[crypto_auth_BYTES+sizeof(uint32_t)];     // formed from last 4-byte random nonce and 32-byte HMAC to check for duplicate transmissions
 
@@ -112,25 +115,16 @@ class SpanCast {
 
   static const int MAX_MESSAGE_SIZE = ESP_NOW_MAX_DATA_LEN_V2-crypto_auth_BYTES-sizeof(uint32_t);
 
-  static uint16_t range(uint8_t start, uint8_t end){
-    uint16_t mask=0;
-    for(int i=start;i<=end;i++)
-      mask|=(1<<i);
-    return(mask);
-  }
+  static boolean configure(uint8_t deviceID, SpConfig_t cfg=SpConfig_t::getDefault());
+  static uint16_t range(uint8_t start, uint8_t end);
+  static uint16_t list(std::initializer_list<uint8_t> list);
 
-  static uint16_t list(std::initializer_list<uint8_t> list){
-    uint16_t mask=0;
-    for(uint8_t i : list)
-      mask|=(1<<i);
-    return(mask);
-  }
-
-  static boolean configure(uint8_t deviceID, SpConfig_t cfg=spConf);
-  SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, SpCast_t settings=spCastDefault);
+  SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, SpCast_t settings=SpCast_t::getDefault());
 
   boolean send(const void *data);
   boolean get(void *dataBuf);
   boolean isActive();
+
+  explicit operator bool() const {return(initialized);}
 };
 

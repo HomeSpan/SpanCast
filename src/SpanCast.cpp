@@ -37,7 +37,7 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
     ESP_LOGW(DIAG_TAG,"Duplicate call to configure(%hhu,...) ignored",deviceID);
     return(false);
   }
-
+  
   spConf=cfg;                       // save config data  
   if(spConf.numTries==0)            // if numTries was set to 0, reset it to 1
     spConf.numTries=1;
@@ -328,11 +328,28 @@ boolean SpanCast::isActive(){
 
 ///////////////////////////////
 
+uint16_t SpanCast::range(uint8_t start, uint8_t end){
+  uint16_t mask=0;
+  for(int i=start;i<=end;i++)
+    mask|=(1<<i);
+  return(mask);
+}
+
+///////////////////////////////
+
+uint16_t SpanCast::list(std::initializer_list<uint8_t> list){
+  uint16_t mask=0;
+  for(uint8_t i : list)
+    mask|=(1<<i);
+  return(mask);
+}
+
+///////////////////////////////
+
 std::vector<SpanCast *> SpanCast::SpanCasts;
 QueueHandle_t SpanCast::statusQueue;
 SpanCast::SpAddress *SpanCast::deviceAddress=NULL;
-SpanCast::SpConfig_t SpanCast::spConf{};
-SpanCast::SpCast_t SpanCast::spCastDefault{};
+SpanCast::SpConfig_t SpanCast::spConf;
 boolean SpanCast::configured=false;
 MasterKey *SpanCast::mKey;
 HMAC *SpanCast::localHMAC;
