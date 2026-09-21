@@ -39,7 +39,7 @@ void setup() {
   Serial.begin(115200);
   delay(1000); 
 
-  Serial.printf("\n\nReady.\n\n");
+  Serial.printf("\n\nReady SpanCast Version=%s.\n\n",SpanCast::VERSION);
 
   SpanCast::configure(0,{.password="HomeSpan",.encrypt=false,.channelMask=SpanCast::range(1,11)});
 

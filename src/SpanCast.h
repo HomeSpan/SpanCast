@@ -69,7 +69,7 @@ class SpanCast {
 
   struct SpConfig_t {
     uint16_t network=1;
-    String password="HomeSpan";
+    String password="spancast123";
     boolean encrypt=true;
     uint16_t channelMask=0;
     uint8_t numTries=3;
@@ -114,6 +114,7 @@ class SpanCast {
 
   public:
 
+  static constexpr char VERSION[] = "1.0.0";
   static const int MAX_MESSAGE_SIZE = ESP_NOW_MAX_DATA_LEN_V2-crypto_auth_BYTES-sizeof(uint32_t);
 
   static boolean configure(uint8_t deviceID, SpConfig_t cfg=SpConfig_t::getDefault());
