@@ -27,55 +27,92 @@
 
 #include "SpanCast.h"  
   
-///////////////////////////////
+#define TEMP_HUM_DEVICE_ID      1   // SpanCast Device ID for the Temperature+Humidity Sensor
+#define WIND_SPEED_DEVICE_ID    2   // SpanCast Device ID for the Wind Speed Sensor
+#define BAROMETER_DEVICE_ID     3   // SpanCast Device ID for the Barometric Pressure Sensor
 
-SpanCast *mainDevice;
-float temp=-10.0;         // this global variable represents our "simulated" temperature (in degrees C)
+#define UPDATE_FREQUENCY     8000   // how frequently (in millseconds) for this device to send out updates
 
 //////////////////////
 
 void setup() {
 
   Serial.begin(115200);
-  delay(1000); 
+  delay(1000);
 
-  Serial.printf("\n\nReady SpanCast Version=%s.\n\n",SpanCast::VERSION);
+  struct {
+    float temperature;
+    uint8_t humidity;
+  } tempHum;
 
-  SpanCast::configure(0,{.password="HomeSpan",.encrypt=false,.channelMask=SpanCast::range(1,11)});
+  uint8_t windSpeed=10;
+  char barometerMessage[64];
 
-  for(int i=1;i<30;i++)
-    new SpanCast(i,0,20,{.encrypt=true});
+  Serial.printf("\n\nWind Speed Sensor Ready.\n\n");
 
-  while(1){delay(1000);}
+  SpanCast::configure(WIND_SPEED_DEVICE_ID,{.encrypt=false,.channelMask=SpanCast::list({5})});
 
-  mainDevice=new SpanCast(18,4,48,{.timeout=5});
+  WiFi.enableSTA(true);
+
+
+  SpanCast tempHumSensor(TEMP_HUM_DEVICE_ID,sizeof(windSpeed),sizeof(tempHum),{.encrypt=true});
+  SpanCast barometerSensor(BAROMETER_DEVICE_ID,sizeof(windSpeed),sizeof(barometerMessage));
+
+  uint32_t updateTime=0;
+
+  while(1){
+
+    if(millis()-updateTime > UPDATE_FREQUENCY){
+
+      windSpeed++;
+      if(windSpeed>30)
+        windSpeed=10;
+
+      Serial.printf("Sending to Temp/Hum Sensor -> Lastest Wind Speed Reading ... ");
+
+      if(tempHumSensor.send(&windSpeed))
+        Serial.printf("Succeeded\n");
+      else
+        Serial.printf("Failed\n");
+
+      Serial.printf("Sending to Barometer Sensor -> Lastest Wind Speed Reading ... ");
+
+      if(barometerSensor.send(&windSpeed))
+        Serial.printf("Succeeded\n");
+      else
+        Serial.printf("Failed\n");
+
+      Serial.printf("\n---------------------------\n");
+      if(tempHumSensor.isActive()){
+        Serial.printf("Temperature:  %0.1fC\n",tempHum.temperature);
+        Serial.printf("Humidity:     %d%%\n",tempHum.humidity);
+      } else {
+        Serial.printf("Temperature:  ---\n");
+        Serial.printf("Humidity:     ---\n");
+      }
+      Serial.printf("Wind Speed:   %d km/hr\n",windSpeed);
+      if(barometerSensor.isActive())
+        Serial.printf("Barometer:    %s\n",barometerMessage);
+      else
+        Serial.printf("Barometer:    ---\n");
+      Serial.printf("---------------------------\n\n");
+
+      updateTime=millis();        
+    }
+
+    if(tempHumSensor.get(&tempHum))
+      Serial.printf("Received from Temp/Hum Sensor: Temp=%0.1f, Hum=%d\n",tempHum.temperature,tempHum.humidity);
+
+    if(barometerSensor.get(barometerMessage))
+      Serial.printf("Received from Barometer Sensor: Bar=%s\n",barometerMessage);
+
+    delay(1);
+  }
 }
 
 //////////////////////
 
-uint32_t aTime=0;
-uint8_t msgData[48];
-
 void loop() {
-
-  if(millis()-aTime>5000){
-
-    Serial.printf("Sending Temperature: %f\n",temp);
-
-    if(mainDevice->send(&temp))
-      Serial.printf("Send SUCCEEDED!\n");
-    else
-      Serial.printf("Send FAILED!\n");
-
-    temp+=0.5;       // increment the "temperature" by 0.5 C
-    if(temp>35.0)
-      temp=-10.0;
-
-    aTime=millis();
-  }
-
-  if(mainDevice->get(msgData))
-    Serial.printf("Message Received = '%s'\n",msgData);
-
-
 }
+
+//////////////////////

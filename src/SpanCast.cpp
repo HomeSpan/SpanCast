@@ -43,9 +43,9 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
     spConf.numTries=1;
 
   #ifdef ARDUINO_ARCH_ESP32
-    WiFi.mode(WIFI_AP_STA);
+    WiFi.enableAP(true);
   #else
-    WiFi.mode(WIFI_STA);
+    WiFi.enableSTA(true);
   #endif
 
   delay(10);
