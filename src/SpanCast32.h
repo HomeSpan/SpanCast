@@ -35,6 +35,8 @@
 #include <esp_now.h>
 #include <sodium.h>
 
+namespace SpanCastPrivate {
+
 ///////////////////////////////
 
 class MasterKey {
@@ -94,5 +96,7 @@ class HMAC {
 };
 
 ///////////////////////////////
+
+};  // SpanCastPrivate
 
 

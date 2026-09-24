@@ -59,7 +59,7 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
 
   esp_now_init();
 
-  mKey = new MasterKey(spConf.password.c_str(),"SpanCast");
+  mKey = new SpanCastPrivate::MasterKey(spConf.password.c_str(),"SpanCast");
 
   uint8_t pmk[ESP_NOW_KEY_LEN];
   mKey->create("Key for PMK",pmk,ESP_NOW_KEY_LEN); 
@@ -83,8 +83,8 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
     });
   #endif
 
-  statusQueue = xQueueCreate(1,sizeof(esp_now_send_status_t));    // create statusQueue even if not needed
-  localHMAC = new HMAC(mKey,deviceAddress->mac,6);                // create authentication key for the MAC of this device
+  statusQueue = xQueueCreate(1,sizeof(esp_now_send_status_t));            // create statusQueue even if not needed
+  localHMAC = new SpanCastPrivate::HMAC(mKey,deviceAddress->mac,6);       // create authentication key for the MAC of this device
 
   wifi_country_t country;
   esp_wifi_get_country(&country);
@@ -257,7 +257,7 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
     return;
   }
 
-  HMAC remoteHMAC(SpanCast::mKey,mac,6);
+  SpanCastPrivate::HMAC remoteHMAC(SpanCast::mKey,mac,6);
   if(!remoteHMAC.verify(incomingData, len) || len<=sizeof(lastMessageID)){
     ESP_LOGW(DIAG_TAG,"Ignoring unverifiable %d-byte message received from DeviceID=%hhu",len,srcAddress->devID);
     return;
@@ -353,8 +353,8 @@ QueueHandle_t SpanCast::statusQueue;
 SpanCast::SpAddress *SpanCast::deviceAddress=NULL;
 SpanCast::SpConfig_t SpanCast::spConf;
 boolean SpanCast::configured=false;
-MasterKey *SpanCast::mKey;
-HMAC *SpanCast::localHMAC;
+SpanCastPrivate::MasterKey *SpanCast::mKey;
+SpanCastPrivate::HMAC *SpanCast::localHMAC;
 
 ///////////////////////////////
 

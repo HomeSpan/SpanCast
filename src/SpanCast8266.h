@@ -68,6 +68,8 @@ using esp_now_send_status_t = uint8_t;
   #define ESP_LOGV(TAG,format,...) { (void)0; }
 #endif
 
+namespace SpanCastPrivate {
+
 ///////////////////////////////
 
 class MasterKey {
@@ -188,9 +190,13 @@ class SimpleQueue {
   }
 };
 
-using QueueHandle_t = SimpleQueue*;
+///////////////////////////////
 
-#define xQueueCreate(depth, nBytes) new SimpleQueue(depth, nBytes)
+};  // SpanCastPrivate
+
+using QueueHandle_t = SpanCastPrivate::SimpleQueue*;
+
+#define xQueueCreate(depth, nBytes) new SpanCastPrivate::SimpleQueue(depth, nBytes)
 #define xQueueSend(queue, data, unused_waitTime) queue->send(data,false)
 #define xQueueOverwrite(queue, data) queue->send(data,true)
 #define xQueueReceive(queue, data, waitTime) queue->receive(data,waitTime)

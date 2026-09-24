@@ -99,8 +99,8 @@ class SpanCast {
 
   uint8_t lastMessageID[crypto_auth_BYTES+sizeof(uint32_t)];     // formed from last 4-byte random nonce and 32-byte HMAC to check for duplicate transmissions
 
-  static MasterKey *mKey;
-  static HMAC *localHMAC;
+  static SpanCastPrivate::MasterKey *mKey;
+  static SpanCastPrivate::HMAC *localHMAC;
     
   static std::vector<SpanCast *> SpanCasts;
 

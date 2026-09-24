@@ -52,9 +52,6 @@ void setup() {
 
   SpanCast::configure(WIND_SPEED_DEVICE_ID,{.encrypt=false,.channelMask=SpanCast::list({5})});
 
-  WiFi.enableSTA(true);
-
-
   SpanCast tempHumSensor(TEMP_HUM_DEVICE_ID,sizeof(windSpeed),sizeof(tempHum),{.encrypt=true});
   SpanCast barometerSensor(BAROMETER_DEVICE_ID,sizeof(windSpeed),sizeof(barometerMessage));
 
