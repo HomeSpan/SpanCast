@@ -42,6 +42,19 @@ Receiving is just as easy.  Simply call the `get()` method.  This method also ta
 
 ### WiFi Channels
 
+The widely-used 2.4 GHz WiFi protocol is divided into fourteen overlapping channels numbered 1-14.  Most of the world allows the general use of channels 1-13, though in North America only channels 1-11 can be used without separate power restrictions for channels 12-13.  Channel 14 is only used in Japan, with limitations.
+
+In order for SpanCast to send messages from one device to another, the WiFi radios on both devices must be set to the same channel.[^wifi]  SpanCast allows you to optionally specify a channel as part of the `configure()` function, which works fine for if your devices only connect to each other via SpanCast.
+
+However, things get more complicated if one or more of your devices using SpanCast *also* connects to your central WiFi network, as is quite typical.  When a device connects to a central WiFi network, that network's router chooses the WiFi channel to use, and upon connecting, the device will adopt that channel.  More so, though it is possible to preset the WiFI channel used by WiFi router to a specific value, it is much more common to allow the WiFi router to dynamically select and periodically update the WiFi channel it uses based on current radio conditions and interference.  Though this helps keep home networks optimized, it means the WiFi channel used by any SpanCast device that is *not* connected to the central WiFi network (such as remote-sensor devices, battery-operated pushbutton devices, etc.) will quickly get out of sync with the WiFi channel used by devices that are connected to the central network.
+
+SpanCast has been designed to automatically solve this problem through the use of an optional *channelMask* parameter to the `configure()` function.  This parameter acts as a 16-bit mask allowing you to specify which channels the device should utilize when transmitting SpanCast messages.  If bit N is set, that means channel N is allowed, else it is not.  Note that since there are no WiFi Channels 0 or 15, those bits do not matter and are typically left as zero.  For example, setting the *channelMask* to 64 (0x0040) tells SpanCast to use only WiFi Channel 6.  Setting the *channelMask* instead to 4094 (0x0FFE) tells SpanCast to use any channel from 1-11.
+
+Setting the *channelMask* exactly to zero has an important and special meaning:  It tells SpanCast *not* to perform any channel management and to simply transmit messages using whatever channel is already set.  This is the setting to use if your device is also connecting to a central WiFi network, as it allows the WiFi connection logic to manage the channel settings according to the central network without interference from SpanCast.
+
+
+[^wifi]: If two devices are in close proximity, it is possible for messages to be successfully received even if the WiFi channels of the devices differ by one or two (e.g. channels 5 and 6).  However, reception will degraded.  To ensure the best fidelity and coverage, the devices should always be set to the same channel.
+
 ### Example Sketches
 
 Below is a simple example showing the sketches for one device transmitting a simple counting variable to another device.  For those new to C++, note that in the first sketch we kept all the logic in the Arduino `setup()` function and were able to instantiate a local SpanCast variable.  But in the second sketch we placed the SpanCast polling logic in the Arduino `loop()` function, which required the use of a global SpanCast variable that is instantiated in the `setup()` function using `new`.  
