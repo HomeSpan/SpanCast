@@ -192,7 +192,7 @@ SpanCast::SpanCast(uint8_t deviceID, size_t sendSize, size_t receiveSize, SpCast
 
 boolean SpanCast::send(const void *data){
 
-  const SpAddress *destAddress = (SpAddress *)peerInfo.peer_addr;
+  [[maybe_unused]] const SpAddress *destAddress = (SpAddress *)peerInfo.peer_addr;
 
   if(!initialized){
     ESP_LOGE(DIAG_TAG,"Can't send to DeviceID=%hhu - SpanCast object not initialized",destAddress->devID);
