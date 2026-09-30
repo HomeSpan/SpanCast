@@ -42,9 +42,11 @@ Receiving is just as easy.  Simply call the `get()` method.  This method also ta
 
 ### WiFi Channels
 
-The widely-used 2.4 GHz WiFi protocol is divided into fourteen overlapping channels numbered 1-14.  Most of the world allows the general use of channels 1-13, though in North America only channels 1-11 can be used without separate power restrictions for channels 12-13.  Channel 14 is only used in Japan, with limitations.
+WiFi networks operating at 2.4 GHz provide fourteen overlapping channels numbered 1-14 with regional limitations: in North America channels 1-11 are generally allowed; outside of North America channels 1-13 can be used; and in Japan channel 14 is also available for use in certain circumstances.
 
-In order for SpanCast to send messages from one device to another, the WiFi radios on both devices must be set to the same channel.[^wifi]  SpanCast allows you to optionally specify a channel as part of the `configure()` function, which works fine for if your devices only connect to each other via SpanCast.
+In order for WiFi transmissions from one device to be successfully received by another device, the WiFi radios on both devices should be set to the same channel.  
+
+Depending on whether your device is also connected to a central WiFi network, you can instruct SpanCast to take control of the channel selection, or you SpanCast can allow allows you to optionally specify a channel as part of the `configure()` function, which works fine for if your devices only connect to each other via SpanCast.
 
 However, things get more complicated if one or more of your devices using SpanCast *also* connects to your central WiFi network, as is quite typical.  When a device connects to a central WiFi network, that network's router chooses the WiFi channel to use, and upon connecting, the device will adopt that channel.  More so, though it is possible to preset the WiFI channel used by WiFi router to a specific value, it is much more common to allow the WiFi router to dynamically select and periodically update the WiFi channel it uses based on current radio conditions and interference.  Though this helps keep home networks optimized, it means the WiFi channel used by any SpanCast device that is *not* connected to the central WiFi network (such as remote-sensor devices, battery-operated pushbutton devices, etc.) will quickly get out of sync with the WiFi channel used by devices that are connected to the central network.
 
