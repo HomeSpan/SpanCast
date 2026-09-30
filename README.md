@@ -44,7 +44,11 @@ Receiving is just as easy.  Simply call the `get()` method.  This method also ta
 
 WiFi networks operating at 2.4 GHz provide fourteen overlapping channels numbered 1-14 with regional limitations: in North America channels 1-11 are generally allowed; outside of North America channels 1-13 can be used; and in Japan channel 14 is also available for use in certain circumstances.
 
-In order for WiFi transmissions from one device to be successfully received by another device, the WiFi radios on both devices should be set to the same channel.  
+In order for WiFi transmissions from one device to be successfully received by another device, the WiFi radios on both devices should be set to the same channel.
+
+By default, SpanCast will refrain from making any changes to the WiFi channel used by the device.  This is a proper setting for any device that will be connected to a central WiFi network (e.g. using `WiFi.begin()`), since the WiFi library itself takes care of setting the WiFi channel to ensure it stays synchronized with whatever channel is being used by your central network's WiFi router.
+
+
 
 Depending on whether your device is also connected to a central WiFi network, you can instruct SpanCast to take control of the channel selection, or you SpanCast can allow allows you to optionally specify a channel as part of the `configure()` function, which works fine for if your devices only connect to each other via SpanCast.
 
