@@ -42,9 +42,18 @@ Receiving is just as easy.  Simply call the `get()` method.  This method also ta
 
 ### WiFi Channels
 
-WiFi networks operating at 2.4 GHz provide fourteen overlapping channels numbered 1-14 with regional limitations: in North America channels 1-11 are generally allowed; outside of North America channels 1-13 can be used; and in Japan channel 14 is also available for use in certain circumstances.
+WiFi networks operating at 2.4 GHz provide fourteen overlapping channels numbered 1-14 with regional limitations: in North America channels 1-11 are generally allowed; outside of North America channels 1-13 can be used; and in Japan channel 14 is also available for use in certain circumstances.  In order for WiFi transmissions from one device to be reliably received by another device, the WiFi radios on both devices must be set to the same channel.  SpanCast provides a number of methods to ensure WiFi channels are synchronized across all your devices depending on the specifics of your set up.
 
-In order for WiFi transmissions from one device to be successfully received by another device, the WiFi radios on both devices should be set to the same channel.
+If none of your SpanCast devices are going to be connected to a central WiFi network, you can simply have SpanCast set the WiFi radio on each device to a specific channel of your choosing during the call to `configure()` through the use of the optional *channelMask* parameter (see below for details).
+
+However, if one or more of your devices are also intended to connect to a central WiFi network, SpanCast should be configured as follows:
+
+* For those devices that are going to connect to a central WiFi network, SpanCast should not set nor make any changes to the WiFi channel --- the because the WiFi you need to allow the WiFi library to manage the WiFi channel selection so that it stays synchronized with whatever channel is being used by your central WiFi router at any given time.  The default behavior for SpanCast is to refrain from making any changes to the WiFi channel so is the default for SpanCast so there are no parameters you need 
+
+* For those devices that are on
+* SpanCast can set the WiFi radio to a channel you specify as an option to depending upon the specifics of your setup.
+
+
 
 By default, SpanCast will refrain from making any changes to the WiFi channel used by the device.  This is a proper setting for any device that will be connected to a central WiFi network (e.g. using `WiFi.begin()`), since the WiFi library itself takes care of setting the WiFi channel to ensure it stays synchronized with whatever channel is being used by your central network's WiFi router.
 
