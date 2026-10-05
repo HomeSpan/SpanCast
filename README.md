@@ -42,33 +42,18 @@ Receiving is just as easy.  Simply call the `get()` method.  This method also ta
 
 ### WiFi Channels
 
-WiFi networks operating at 2.4 GHz provide fourteen overlapping channels numbered 1-14 with regional limitations: in North America channels 1-11 are generally allowed; outside of North America channels 1-13 can be used; and in Japan channel 14 is also available for use in certain circumstances.  In order for WiFi transmissions from one device to be reliably received by another device, the WiFi radios on both devices must be set to the same channel.  SpanCast provides a number of methods to ensure WiFi channels are synchronized across all your devices depending on the specifics of your set up.
-
-If none of your SpanCast devices are going to be connected to a central WiFi network, you can simply have SpanCast set the WiFi radio on each device to a specific channel of your choosing during the call to `configure()` through the use of the optional *channelMask* parameter (see below for details).
-
-However, if one or more of your devices are also intended to connect to a central WiFi network, SpanCast should be configured as follows:
-
-* For those devices that are going to connect to a central WiFi network, SpanCast should not set nor make any changes to the WiFi channel --- the because the WiFi you need to allow the WiFi library to manage the WiFi channel selection so that it stays synchronized with whatever channel is being used by your central WiFi router at any given time.  The default behavior for SpanCast is to refrain from making any changes to the WiFi channel so is the default for SpanCast so there are no parameters you need 
-
-* For those devices that are on
-* SpanCast can set the WiFi radio to a channel you specify as an option to depending upon the specifics of your setup.
-
-
-
-By default, SpanCast will refrain from making any changes to the WiFi channel used by the device.  This is a proper setting for any device that will be connected to a central WiFi network (e.g. using `WiFi.begin()`), since the WiFi library itself takes care of setting the WiFi channel to ensure it stays synchronized with whatever channel is being used by your central network's WiFi router.
-
-
-
-Depending on whether your device is also connected to a central WiFi network, you can instruct SpanCast to take control of the channel selection, or you SpanCast can allow allows you to optionally specify a channel as part of the `configure()` function, which works fine for if your devices only connect to each other via SpanCast.
-
-However, things get more complicated if one or more of your devices using SpanCast *also* connects to your central WiFi network, as is quite typical.  When a device connects to a central WiFi network, that network's router chooses the WiFi channel to use, and upon connecting, the device will adopt that channel.  More so, though it is possible to preset the WiFI channel used by WiFi router to a specific value, it is much more common to allow the WiFi router to dynamically select and periodically update the WiFi channel it uses based on current radio conditions and interference.  Though this helps keep home networks optimized, it means the WiFi channel used by any SpanCast device that is *not* connected to the central WiFi network (such as remote-sensor devices, battery-operated pushbutton devices, etc.) will quickly get out of sync with the WiFi channel used by devices that are connected to the central network.
-
-SpanCast has been designed to automatically solve this problem through the use of an optional *channelMask* parameter to the `configure()` function.  This parameter acts as a 16-bit mask allowing you to specify which channels the device should utilize when transmitting SpanCast messages.  If bit N is set, that means channel N is allowed, else it is not.  Note that since there are no WiFi Channels 0 or 15, those bits do not matter and are typically left as zero.  For example, setting the *channelMask* to 64 (0x0040) tells SpanCast to use only WiFi Channel 6.  Setting the *channelMask* instead to 4094 (0x0FFE) tells SpanCast to use any channel from 1-11.
-
-Setting the *channelMask* exactly to zero has an important and special meaning:  It tells SpanCast *not* to perform any channel management and to simply transmit messages using whatever channel is already set.  This is the setting to use if your device is also connecting to a central WiFi network, as it allows the WiFi connection logic to manage the channel settings according to the central network without interference from SpanCast.
-
+WiFi networks operating at 2.4 GHz provide fourteen overlapping channels numbered 1-14 with regional limitations: in North America channels 1-11 are generally allowed; outside of North America channels 1-13 can be used; and in Japan channel 14 is also available for use in certain circumstances.  In order for WiFi transmissions from one device to be reliably received by another device, the WiFi radios on both devices must be set to the same channel.[^wifi]
 
 [^wifi]: If two devices are in close proximity, it is possible for messages to be successfully received even if the WiFi channels of the devices differ by one or two (e.g. channels 5 and 6).  However, reception will degraded.  To ensure the best fidelity and coverage, the devices should always be set to the same channel.
+
+By default, SpanCast will refrain from making any changes to the WiFi channel used by the device.  Instead, SpanCast will transmit data on, and listen for data from, whatever WiFi channel happens to be set when the member functions `send()` and `get()` are called.  This is a proper setting for any SpanCast device that will be connected to a central WiFi network (e.g. using `WiFi.begin()`), since the WiFi library itself takes care of setting the WiFi channel to ensure it stays synchronized with whatever channel is being used by your central network's WiFi router.  In such cases SpanCast simply uses whatever channel the WiFi library has selected.
+
+However, SpanCast also includes a user-configurable option that dynamically changes the channel of the device's WiFi radio whenever the member function `send()` is called in an attempt to match the WiFi channel used by the receiving device.  Usage of this option is the proper setting for any SpanCast device that is not itself connected to a central WiFi network, but that is transmitting to another SpanCast device that is connected to a central WiFi network.
+
+Invoking this option is done during the call to `configure()` by setting the optional *channelMask* parameter to a non-zero value.  The *channelMask* parameter is a 16-bit mask allowing you to specify which channels SpanCast should utilize when transmitting SpanCast messages.  For each bit N in *channelMask*, where N ranges from 1 to 14, if the bit is set SpanCast will attempt transmissions using WiFi channel N.  If bit N is not set SpanCast will not use that channel.  For example, setting the *channelMask* to 64 (0x0040) tells SpanCast to use only WiFi channel 6.  Setting the *channelMask* instead to 4094 (0x0FFE) tells SpanCast to use any channel from 1-11. Note that since there are no WiFi Channels 0 or 15, bit 0 and bit 15 of *channelMask* do not matter and are typically left as zero.
+
+
+
 
 ### Example Sketches
 
