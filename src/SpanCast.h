@@ -111,6 +111,7 @@ class SpanCast {
  
   static void dataReceived(const uint8_t *mac, const uint8_t *incomingData, int len);
   static uint8_t nextChannel(uint8_t channel);
+  static boolean allowedChannel(uint8_t channel);
 
   public:
 

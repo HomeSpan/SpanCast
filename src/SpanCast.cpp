@@ -301,6 +301,13 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
 
 ///////////////////////////////
 
+boolean SpanCast::allowedChannel(uint8_t channel){
+
+  return((spConf.channelMask==0) || (spConf.channelMask & (1<<channel)));
+}
+
+///////////////////////////////
+
 uint8_t SpanCast::nextChannel(uint8_t channel){
 
   // do NOT change channel if channel mask is set to zero or channel mask does not allow for any other channels
