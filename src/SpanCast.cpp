@@ -88,21 +88,16 @@ boolean SpanCast::configure(uint8_t deviceID, SpConfig_t cfg){
 
   wifi_country_t country;
   esp_wifi_get_country(&country);
-  spConf.channelMask=spConf.channelMask & ((1<<country.nchan)-1)<<country.schan;     // overlay country-specific mask (e.g. channels 1-11, 1-13, or 1-14 only)  
+  spConf.channelMask=spConf.channelMask & ((1<<country.nchan)-1)<<country.schan;     // overlay country-specific mask (e.g. channels 1-11, 1-13, or 1-14 only)
 
-  EEPROM.begin(1);                                            // read last-saved channel using EEPROM library since it works with both ESP32 and ESP8266
-  uint8_t channel=EEPROM.read(0);
-
-  for(int i=0;i<16;i++,channel=(channel+1)%16){               // loop over all mask bits (starting with saved channel)
-    if(spConf.channelMask & (1<<channel)){                    // if channel is allowed by channel mask
-      esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);   // set the WiFi channel
-      if(i>0){                                                // updated saved channel if needed
-        EEPROM.write(0,channel);
-        EEPROM.commit();
-      }
-      break;                                                  // break out of loop
-    }
-  }
+  if(spConf.channelMask>0){                                   // a non-zero channel mask indicates WiFi channel must be set initially by SpanCast
+    EEPROM.begin(1);                                          // use EEPROM library since it works with both ESP32 and ESP8266
+    uint8_t channel=EEPROM.read(0);                           // read last-saved channel
+    if(allowedChannel(channel))                               
+      esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);   // if channel is allowed by channel mask, set channel
+    else
+      channel=nextChannel(0);                                 // else set channel to first allowed
+  }  
 
   ESP_LOGI(DIAG_TAG,"Configured as DeviceID=%hhu / NetworkID=%hu / ChannelMask=0x%04X.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X.  Initial Channel=%hhu",
           deviceAddress->devID,deviceAddress->netID,spConf.channelMask,
@@ -204,10 +199,12 @@ boolean SpanCast::send(const void *data){
     return(false);
   }
   
-  uint8_t channel = WiFi.channel();
-  uint8_t startingChannel=channel;              // set starting channel to current channel
+  uint8_t channel=WiFi.channel();           // get current WiFi channel
+  if(!allowedChannel(channel))              // if channel is NOT allowed by channel mask, set channel to first allowed
+    channel=nextChannel(0);
+  uint8_t startingChannel=channel;          // set starting channel to current channel
 
-  uint32_t nonce=esp_random();                                                   // create random 4-byte nonce to allow rejection of duplicate messages received but not acknowlegded
+  uint32_t nonce=esp_random();                                                   // create random 4-byte nonce to allow rejection of duplicate messages received but not acknowledged
   size_t msgSize=sendSize+crypto_auth_BYTES+sizeof(nonce);                       // size of message with HMAC + nonce
   uint8_t *msg=(uint8_t *)malloc(msgSize);                                       // allocate new memory reflecting large size
   memcpy(msg,data,sendSize);                                                     // copy data into first part of memory block
@@ -303,6 +300,8 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
 
 boolean SpanCast::allowedChannel(uint8_t channel){
 
+  // always return true if channelMask is set to zero, else return whether channel is allowed by mask
+
   return((spConf.channelMask==0) || (spConf.channelMask & (1<<channel)));
 }
 
@@ -316,8 +315,8 @@ uint8_t SpanCast::nextChannel(uint8_t channel){
     return(channel);
 
   do {
-    channel=(channel<13)?channel+1:1;              // advance to next channel
-  } while(!(spConf.channelMask & (1<<channel)));   // until we find next valid one
+    channel=(channel<14)?channel+1:1;              // advance to next channel
+  } while(!allowedChannel(channel));               // until we find next valid one
 
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);   // set the WiFi channel
   EEPROM.write(0,channel);
