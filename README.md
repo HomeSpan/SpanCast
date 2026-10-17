@@ -80,14 +80,7 @@ Further considerations:
 
 * In any network of SpanCast devices there should be at least one device with either a fixed WiFi channel or one that is connected to a central WiFi network.  If every device in your SpanCast network is configured to auto-sync with a range of channels allowed by the *channelMask* the devices will likely not settle down on a specific channel as they are each is trying to synchronize to the other without any fixed channel as a reference.
 
-### Region-Specific Channel Restrictions
-
-As discussed above, different regions allow different ranges of channels to be used for 2.4 GHz WiFi.  Both the ESP32 and ESP8266 microcontrollers have built-in logic that codes for the region and the allowed channels.  SpanCast uses this information during configuration to filter out from the *channelMask* any channels that are not allowed according the chips encoded region.  For example, if the encoded region for your chip is North America and you set the *channelMask* to 0x3FFE (allowing for channels 1-13), *channelMask* will be reset to 0x0FFE by `config()` to exclude channels 12 and 13 since they are not allowed in North America.  Note `config()` will never expand the list of allowed channels you have specified; it only filters them to prevent channels that are not allowed.
-
-In addition to filtering out disallowed channels from *channelMask*, the `config()` function also sets the initial channel to use, provided that *channelMask* is not set to zero (the default).
-
-
-
+* Both the ESP32 and ESP8266 microcontrollers have built-in logic that encode the region of the chip and the allowed channels.  SpanCast uses this information during configuration to filter out from the *channelMask* any channels that are not allowed according the chips encoded region.  For example, if the encoded region for your chip is North America and you set the *channelMask* to 0x3FFE (allowing for channels 1-13), *channelMask* will be reset to 0x0FFE by `config()` to exclude channels 12 and 13 since they are not allowed in North America.  Caution: though tempting, do not simply set the *channelMask* to 0xFFFF and allow SpanCast to filter out the disallowed channels based on the region code for your chip. ESP32 and ESP8266 chips are shipped world-wide and there is no guarantee that device you have has been pre-coded with the region where the device will be used.  It's always best set the *channelMask* to only those channels you know are allowed in your region.
 
 ### Example Sketches
 
