@@ -32,15 +32,19 @@ AND...
 
 SpanCast is implemented as a single C++ *class* providing both static functions and non-static methods.  To access SpanCast, simply add `#include "SpanCast.h"` to the top of your sketch.
 
+### Initial Configuration, SpanCast Device IDs and optional SpanCast Network IDs
+
 Each instantiation of a SpanCast object represents a bi-directional link between your device and another device, which also must be running SpanCast.  However, before creating any SpanCast objects you first need to configure SpanCast by calling the static function `SpanCast::configure()`, typically from with the `setup()` portion of your sketch.  This function allows you to set a SpanCast *Device ID* for your device, in the range of 0 through 255.  The *Device ID* needs to be unique for each device running SpanCast, though there are optional arguments to `configure()` (described further below) that allow you to partition your SpanCast devices into distinct "networks" with a separate SpanCast *Network ID* ranging from 0 through 65535.  SpanCast devices that share the same *Network ID* can send and receive messages to each other independently of any devices that may have the same *Device ID* but a different *Network ID*.
 
 Once SpanCast is configured, you can then instantiate SpanCast objects using the SpanCast constructor.  The constructor requires three arguments: the *Device ID* of the *remote* device (also running SpanCast) that you wish to communicate with; the size (in bytes) of the messages to be transmitted from your device to the remote device; and the size (in bytes) of the messages your device expects to receive from the remote device.  Either of the last two arguments may be zero if messages are only being either transmitted or received, but not both.  The SpanCast constructor also includes a number of optional arguments (described further below) that allow you to fine-tune various message transmission parameters.
 
 After you have created a SpanCast object, you then simply call the `send()` method to transmit your message.  This method takes a pointer to another variable containing your message as its only argument.  Your message can represent a single number, a structure of numbers, a data buffer, or even an actual text message.  Anything that can be converted to a `(void *)` pointer can be sent.
 
-Receiving is just as easy.  Simply call the `get()` method.  This method also takes a `(void *)` pointer as its only argument, though in this case the pointer will be filled with the received message, *if it exists*.  The `get()` method returns `true` if data is found, else it returns `false`.  Repeatedly calling `get()` from with a loop is an easy way to "poll" your remote devices for incoming messages.
+Receiving is just as easy.  Simply call the `get()` method.  This method also takes a `(void *)` pointer as its only argument, though in this case the pointer will be filled with the received message, *if it exists*.  The `get()` method returns `true` if data is found, else it returns `false`.  Repeatedly calling `get()` from within a loop is an easy way to "poll" your remote devices for incoming messages.
 
-### WiFi Channels
+Note that at no point do you need to know or hardcode the MAC addresses of any device into your sketch.  Each device is simply identified by a unique combination of a *Device ID* and optional *Network ID* that **you** chose.  SpanCast handles all the logic needed to deal with MAC addresses behind the scenes.
+
+### WiFi Channel Auto-Synchronization
 
 WiFi networks operating at 2.4 GHz provide fourteen overlapping channels numbered 1-14 with regional limitations: in North America channels 1-11 are generally allowed; outside of North America channels 1-13 can be used; and in Japan channel 14 is also available for use in certain circumstances.  In order for WiFi transmissions from one device to be reliably received by another device, the WiFi radios on both devices must be set to the same channel.[^wifi]
 
@@ -56,7 +60,27 @@ When `send()` is called, SpanCast first tries to transmit the message using what
 
 If SpanCast still fails to transmit successfully after *numTries* attempts, it changes the WiFi radio to next allowed channel based on the *channelMask* parameter, and repeats the above process.  In this fashion SpanCast will loop through WiFi channels allowed by *channelMask* and attempt to transmit until either it succeeds or it has tried every WiFi channel allowed at least once.  For example, if the *channelMask* is set to allow only channels {1,3,5,6,9} and the WiFi channel happens to be set to 5 when `send()` is called, SpanCast will first try channel 5, followed by 6, 9, 1, and finally 3.  If at any point the transmission succeeds, `send()` saves the current channel in long-term memory, exits, and returns `true`.  This ensures that `send()` always uses the most recent successful channel when it is next called, even if power is cycled.  Unless the receiving device changes the channel it is using, `send()` will generally not have to probe different channels on subsequent calls.
 
-However, if after trying channel 3 (the last channel allowed by *channelMask* in this example) the transmission is still unsuccessful, SpanCast will reset the channel back 5 (where it started), terminate `send()` and return `false`.
+However, if after trying channel 3 (the last channel allowed by *channelMask* in this example) the transmission is still unsuccessful, SpanCast will reset the channel back to 5 (where it started), terminate `send()` and return `false`.
+
+### Typical Topologies
+
+The most common use case is a topology where one or more standalone SpanCast devices serve as remote sensors transmitting data to a central SpanCast device that is connected to a central WiFi network, perhaps also connected to HomeKit, or maybe just running a Web Server to display the results of the remote sensors.  In this topology the *channelMask* is either left unspecified or set to zero (the default) on the device connected to the central WiFi network, and the *channelMask* on all other devices is set to use the widest range of allowable channels in your region.  This allows each remote device to auto-synchronize its WiFi channel to match that of the central device when it transmits to that device.  As a result, each remote device will naturally sync to the same channel enabling transmissions from one remote device to any other as well. 
+
+In topologies where none of the devices are connected to a central WiFi network, there are numerous possible configurations you can chose:
+
+* pick a WiFi channel to use and set the *channelMask* on each device to allow just that channel.  Every device will always transmit (and listen for transmissions) on only that channel.  The advantage of this configuration is that there is no need to any channel synchronization between devices, so it does not matter if some device only receive data and never transmit (in which case there would be no opportunity of such a device to synchronize to other devices).  The disadvantage of this configuration is that if you want to use a different channel, you need to update and reload the sketches for every device.
+
+* arbitrarily assign one of the devices to act as the anchor for channel synchronization, pick a WiFi channel to use for your network and set the *channelMask* on that specific device to allow just that channel.  Then on all other devices, set the *channelMask* to use the widest range of channels allowed in your region.  The advantage of this configuration is that you only need to set the channel on one device and every other device auto-synchronizes to that channel.  If you later want to use a different channel you only need to update the sketch on one device and all other devices will re-sync to that channel they next transmit data to that device.  The disadvantage of this configuration is that is can only be used if every device is transmitting data to a common device (either directly, or through another device) that is configured with the channel you specified.
+
+* leave the *channelMask* unspecified on one of the devices and set to use the widest range of channels allowed in your region on all other devices.  This is basically the same as the configuration above, but instead of setting the channel on a specific "anchor" device, the channel on that device will default to some value at start-up.
+
+Further considerations:
+
+* WiFi synchronization only occurs when a device transmits data.  If you have a SpanCast device that only receives data, and is *not* a central device with a channel that is either pre-specified or controlled by a central WiFi network, there will be no way for the device to synchronize its channel with the rest of the network.  In such case you should create a dummy variable to periodically transmit to other devices on your network that are synchronized.  This dummy variable does not need to be read or consumed by those other devices.  As long as the first device transmits something to another device, it will be able to synchronize its channel to that device as long as that other device us running SpanCast even if does not have an instance of a SpanCast object that is expecting to receive any data.
+
+*  
+
+
 
 
 ### Example Sketches
