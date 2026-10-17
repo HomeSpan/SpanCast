@@ -76,9 +76,15 @@ In topologies where none of the devices are connected to a central WiFi network,
 
 Further considerations:
 
-* WiFi synchronization only occurs when a device transmits data.  If you have a SpanCast device that only receives data, and is *not* a central device with a channel that is either pre-specified or controlled by a central WiFi network, there will be no way for the device to synchronize its channel with the rest of the network.  In such case you should create a dummy variable to periodically transmit to other devices on your network that are synchronized.  This dummy variable does not need to be read or consumed by those other devices.  As long as the first device transmits something to another device, it will be able to synchronize its channel to that device as long as that other device us running SpanCast even if does not have an instance of a SpanCast object that is expecting to receive any data.
+* WiFi synchronization only occurs when a device transmits data.  If you have a SpanCast device that only receives data that is *not* a central device with a channel that is either pre-specified or controlled by a central WiFi network, there will be no way for the device to synchronize its channel with the rest of the network.  In such case you should create a dummy variable to periodically transmit to some other device on your network that is synchronized or that has a centrally-controlled channel.  This dummy variable does not need to be read or consumed by that other device.  As long as the first device transmits something to the other device, it will be able to synchronize its channel to that device even if that other device does not have an instance of a SpanCast object that is expecting to receive any data from the first device (though it at least needs to have SpanCast configured). 
 
-*  
+* In any network of SpanCast devices there should be at least one device with either a fixed WiFi channel or one that is connected to a central WiFi network.  If every device in your SpanCast network is configured to auto-sync with a range of channels allowed by the *channelMask* the devices will likely not settle down on a specific channel as they are each is trying to synchronize to the other without any fixed channel as a reference.
+
+### Region-Specific Channel Restrictions
+
+As discussed above, different regions allow different ranges of channels to be used for 2.4 GHz WiFi.  Both the ESP32 and ESP8266 microcontrollers have built-in logic that codes for the region and the allowed channels.  SpanCast uses this information during configuration to filter out from the *channelMask* any channels that are not allowed according the chips encoded region.  For example, if the encoded region for your chip is North America and you set the *channelMask* to 0x3FFE (allowing for channels 1-13), *channelMask* will be reset to 0x0FFE by `config()` to exclude channels 12 and 13 since they are not allowed in North America.  Note `config()` will never expand the list of allowed channels you have specified; it only filters them to prevent channels that are not allowed.
+
+In addition to filtering out disallowed channels from *channelMask*, the `config()` function also sets the initial channel to use, provided that *channelMask* is not set to zero (the default).
 
 
 
