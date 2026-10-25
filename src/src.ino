@@ -50,7 +50,7 @@ void setup() {
 
   Serial.printf("\n\nWind Speed Sensor Ready.\n\n");
 
-  SpanCast::configure(WIND_SPEED_DEVICE_ID,{.encrypt=false,.channelMask=SpanCast::list({5})});
+  SpanCast::configure(WIND_SPEED_DEVICE_ID,{.encrypt=false,.channelMask=SpanCast::range(1,11)});
 
   SpanCast tempHumSensor(TEMP_HUM_DEVICE_ID,sizeof(windSpeed),sizeof(tempHum),{.encrypt=true});
   SpanCast barometerSensor(BAROMETER_DEVICE_ID,sizeof(windSpeed),sizeof(barometerMessage));
@@ -94,7 +94,7 @@ void setup() {
         Serial.printf("Barometer:    ---\n");
       Serial.printf("---------------------------\n\n");
 
-      updateTime=millis();        
+      updateTime=millis();   
     }
 
     if(tempHumSensor.get(&tempHum))
