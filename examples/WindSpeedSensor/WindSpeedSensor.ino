@@ -27,9 +27,9 @@
 
 #include "SpanCast.h"  
 
-#define TEMP_HUM_DEVICE_ID      1   // SpanCast Device ID for the Temperature+Humidity Sensor
-#define WIND_SPEED_DEVICE_ID    2   // SpanCast Device ID for the Wind Speed Sensor
-#define BAROMETER_DEVICE_ID     3   // SpanCast Device ID for the Barometric Pressure Sensor
+#define TEMP_HUM_DEVICE_ID      1000   // SpanCast Device ID for the Temperature+Humidity Sensor
+#define WIND_SPEED_DEVICE_ID    2000   // SpanCast Device ID for the Wind Speed Sensor
+#define BAROMETER_DEVICE_ID     3000   // SpanCast Device ID for the Barometric Pressure Sensor
 
 #define UPDATE_FREQUENCY     8000   // how frequently (in millseconds) for this device to send out updates
 
@@ -50,7 +50,7 @@ void setup() {
 
   Serial.printf("\n\nWind Speed Sensor Ready.\n\n");
 
-  SpanCast::configure(WIND_SPEED_DEVICE_ID,{.encrypt=false,.channelMask=SpanCast::list({5})});
+  SpanCast::configure(WIND_SPEED_DEVICE_ID,{.network=4,.encrypt=false,.channelMask=SpanCast::list({5})});
 
   SpanCast tempHumSensor(TEMP_HUM_DEVICE_ID,sizeof(windSpeed),sizeof(tempHum),{.encrypt=true});
   SpanCast barometerSensor(BAROMETER_DEVICE_ID,sizeof(windSpeed),sizeof(barometerMessage));
