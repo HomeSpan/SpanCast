@@ -94,7 +94,7 @@ boolean SpanCast::configure(uint16_t deviceID, SpConfig_t cfg){
     EEPROM.begin(1);                                          // use EEPROM library since it works with both ESP32 and ESP8266
     uint8_t channel=EEPROM.read(0);                           // read last-saved channel
     if(allowedChannel(channel))                               
-      esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);   // if channel is allowed by channel mask, set channel
+      setChannel(channel);                                    // if channel is allowed by channel mask, set channel
     else
       channel=nextChannel(0);                                 // else set channel to first allowed
   }  
@@ -240,7 +240,11 @@ boolean SpanCast::get(void *dataBuf){
   if(receiveSize==0)
     return(false);
 
-  return(xQueueReceive(receiveQueue, dataBuf, 0));
+  portENTER_CRITICAL(&queueLock);
+  boolean status=xQueueReceive(receiveQueue, dataBuf, 0);
+  portEXIT_CRITICAL(&queueLock);
+  
+  return(status);
 }
 
 ///////////////////////////////
@@ -287,6 +291,8 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
 
   memcpy((*it)->lastMessageID,incomingData+len,sizeof(lastMessageID));
 
+  portENTER_CRITICAL(&queueLock);
+
   if( ((*it)->overwriteQueue && xQueueOverwrite((*it)->receiveQueue, incomingData)) || xQueueSend((*it)->receiveQueue, incomingData, 0) ){       // overwrite or send to queue immediately
     ESP_LOGI(DIAG_TAG,"Received %d verified bytes from DeviceID=%hu - Queue updated",len,srcAddress->devID);        
     (*it)->receiveTime=millis();
@@ -294,6 +300,8 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
   } else {
     ESP_LOGW(DIAG_TAG,"Received %d verified bytes from DeviceID=%hu but Queue is already full",len,srcAddress->devID);        
   }
+
+  portEXIT_CRITICAL(&queueLock);
 }
 
 ///////////////////////////////
@@ -318,7 +326,7 @@ uint8_t SpanCast::nextChannel(uint8_t channel){
     channel=(channel<14)?channel+1:1;              // advance to next channel
   } while(!allowedChannel(channel));               // until we find next valid one
 
-  esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);   // set the WiFi channel
+  setChannel(channel);                             // set the WiFi channel
   EEPROM.write(0,channel);
   EEPROM.commit();  
      
@@ -327,10 +335,28 @@ uint8_t SpanCast::nextChannel(uint8_t channel){
 
 ///////////////////////////////
 
+void SpanCast::setChannel(uint8_t channel){
+
+  #ifdef ARDUINO_ARCH_ESP32
+    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  #else
+    wifi_promiscuous_enable(true);
+    wifi_set_channel(channel);
+    wifi_promiscuous_enable(false);
+  #endif
+}
+
+///////////////////////////////
+
 boolean SpanCast::isActive(){
+
+  portENTER_CRITICAL(&queueLock);
 
   if(active && (millis()-receiveTime) > spCast.timeout)
     active=false;
+
+  portEXIT_CRITICAL(&queueLock);
+
   return(active);
 }
 
@@ -361,6 +387,7 @@ SpanCast::SpConfig_t SpanCast::spConf;
 boolean SpanCast::configured=false;
 SpanCastPrivate::MasterKey *SpanCast::mKey;
 SpanCastPrivate::HMAC *SpanCast::localHMAC;
+portMUX_TYPE SpanCast::queueLock=portMUX_INITIALIZER_UNLOCKED;
 
 ///////////////////////////////
 

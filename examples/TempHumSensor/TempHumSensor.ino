@@ -45,8 +45,8 @@ void setup() {
     uint8_t humidity=30;
   } tempHum;
 
-  uint8_t windSpeed;
-  char barometerMessage[64];
+  uint8_t windSpeed=0;
+  char barometerMessage[64]="";
 
   Serial.printf("\n\nTemperature and Humidity Sensor Ready.\n\n");
 
@@ -63,7 +63,17 @@ void setup() {
       Serial.printf("Received from Wind Speed Sensor: Wind=%d\n",windSpeed);
 
     if(barometerSensor.get(barometerMessage))
-      Serial.printf("Received from Barometer Sensor: Bar=%s\n",barometerMessage);    
+      Serial.printf("Received from Barometer Sensor: Bar=%s\n",barometerMessage);
+
+    if(windSpeed>0 && !windSpeedSensor.isActive()){
+      Serial.printf("Lost contact Wind Speed Sensor!\n");
+      windSpeed=0;     
+    }
+
+    if(strlen(barometerMessage) && !barometerSensor.isActive()){
+      Serial.printf("Lost contact Barometer Sensor!\n");
+      sprintf(barometerMessage,"");
+    }
 
     if(millis()-updateTime > UPDATE_FREQUENCY){
 
@@ -92,11 +102,11 @@ void setup() {
       Serial.printf("\n---------------------------\n");
       Serial.printf("Temperature:  %0.1fC\n",tempHum.temperature);
       Serial.printf("Humidity:     %d%%\n",tempHum.humidity);
-      if(windSpeedSensor.isActive())
+      if(windSpeed>0)
         Serial.printf("Wind Speed:   %d km/hr\n",windSpeed);
       else
         Serial.printf("Wind Speed:   ---\n");
-      if(barometerSensor.isActive())
+      if(strlen(barometerMessage))
         Serial.printf("Barometer:    %s\n",barometerMessage);
       else
         Serial.printf("Barometer:    ---\n");
