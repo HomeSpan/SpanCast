@@ -32,6 +32,83 @@ AND...
 
 SpanCast is implemented as a single C++ *class* providing both static functions and non-static methods.  To access SpanCast, simply add `#include "SpanCast.h"` to the top of your sketch.
 
+### Configure SpanCast and assign a SpanCast *Device ID*
+
+Before you can create SpanCast objects you need to first configure SpanCast and assign a unique 16-bit SpanCast *Device ID* to your device.  This ID is used by SpanCast to direct transmissions to, and identifying transmissions received from, other SpanCast devices.  To configure SpanCast and set the *Device ID* call the static function `SpanCast::configure(devID)`, where *devID* is the *Device ID* you wish to assign to your device.
+
+### Create one or more SpanCast Objects
+
+Once SpanCast is configured, you can then create SpanCast objects. Each SpanCast object represents a bi-directional communication link betweeen your device and another device. To create a SpanCast object, use the constructor `SpanCast(remoteDevID, sendSize, receiveSize)`, where *remoteDevID* is the *Device ID* of the device at the other end of the link, *sendSize* is the size (in bytes) of any messsages you intend to transmit to that device, and *receiveSize* is the size (in bytes) of any messsages you expect to receive from that device.  You may set *sendSize* to zero if messsages are not intended to trasnsmitted to other devices using this link.  Similarly you may set *receiveSize* to zero if messages are not intended to be received from other devices using this link.
+
+### Transmit and Receive SpanCast Data Messages
+
+After you have created a SpanCast object, simply call the `send(void *data)` method on that object to transmit the data referenced by the pointer *data* from your device to the device at the other end of the link.  The `send()` method returns *true* if the transmission succeeds, else *false* if it fails.
+
+To receive data from the device at the other end of the link simply call the `get(void *dataBuf)` method on that SpanCast object.  If data is available from that device, `get()` will return *true* and the received message will be copied to the variable referenced by the pointer *dataBuf*.  If data is not available to be received from that device, `get()` will instead return *false* and *dataBuf* will be unmodified.  Repeatedly calling `get()` from within a loop is an easy way to "poll" for incoming messages transmitted to your device from other SpanCast devices.
+
+### A Basic Transmitter/Receiver Example
+
+Just using the above, we can create a pair of sketches in which one device transmits a simple counting integer to another device every 5 seconds.  In this example we will set the *Device ID* to 3 for the transmitter the *Device ID* to 5 for the receiver.  Here is the sketch for the transmitting device:
+
+```C++
+#include "SpanCast.h"
+
+void setup(){
+
+  Serial.begin(115200);
+  delay(2000);
+
+  Serial.printf("\n\nSpanCast Basic Transmitter Example\n\n");
+
+  int counter=0;                                // define and initialize a simple integer counter
+  SpanCast::configure(3);                       // configure SpanCast and set Device ID=3
+  SpanCast myLink(5, sizeof(counter), 0);       // construct SpanCast object with link to device with Device ID=5
+
+  do {
+    Serial.printf("Transmitting counter=%d to other device...",counter);
+
+    boolean status = myLink.send(&counter);   // transmit counter and save the returned status
+
+    if(status)                                // indicate whether transmission succeeded or failed
+      Serial.printf("Success!\n");
+    else
+      Serial.printf("Failed!\n");
+
+    counter++;                                // increment counter
+    delay(5000);                              // delay 5 seconds
+  } while(1);                                 // repeat indefinitely
+}
+
+void loop() {}                                          // nothing is needed in the loop() function
+```
+
+And here is the sketch for the receiving device:
+
+```C++
+#include "SpanCast.h"
+
+void setup(){
+
+  Serial.begin(115200);
+  delay(2000);
+
+  Serial.printf("\n\nSpanCast Basic Receiver Example\n\n");
+
+  int counter;                                  // define a simple integer counter (no need to initialize)
+  SpanCast::configure(5);                       // configure SpanCast and set Device ID=5
+  SpanCast myLink(3, 0, sizeof(counter));       // construct SpanCast object with link to device with Device ID=3
+
+  do {
+    if( myLink.get(&counter) )                                              // check if a message has been received from the other device     
+      Serial.printf("Received counter=%d from other device...",counter);    // if so, print it
+  } while(1);                                   // repeat indefinitely
+}
+
+void loop() {}                                  // nothing is needed in the loop() function
+```
+
+Note the differences in the SpanCast constructors in each sketch.  For the transmitter the second argument, *sendSize*, was set to the size of the counter and third argument, *receiveSize* was set to zero.  For the receiver, *sendSize* is set to zero and *receiveSize* is set to the size of the counter.
+
 ### SpanCast Device Identification
 
 SpanCast utilizes Espressif's ESP-NOW protocol for transmitting and receiving data.  ESP-NOW in turn uses the unique MAC addresses built into the WiFi stacks of ESP32 devices to identify which transmissions are intended for which recipients.  Implementing ESP-NOW directly in a sketch therefore requires you to either hardcode the MAC addresses of all the devices in your network, or to use a generic broadcast MAC address so that you transmit the same data to all device at the same time.  Unfortunately, each of the methods  has drawbacks:
@@ -42,21 +119,9 @@ SpanCast utilizes Espressif's ESP-NOW protocol for transmitting and receiving da
 
 To solve these issues, SpanCast abstracts away the MAC addresses and instead uses the concept of a simple, user-definable SpanCast *Device ID* that you create in each sketch.  SpanCast requires that every device on your SpanCast network is assigned a unique *Device ID*, in the range of 0 through 255.  As described below, within each sketch you can easily direct data transmissions to, and receive data from, other devices based on their resepctive SpanCast *Device IDs*, without needing to know anything about any device's MAC address.  And if a device in your network needs to be replaced, you can simply upload the same sketch to your replacement device without changing any SpanCast identifiers in any sketch, whether on the new device or any other device in your network.
 
-### Configuring SpanCast
 
-Each instantiation of a SpanCast object represents a bi-directional link between your device and another device, which also must be running SpanCast.  However, before creating any SpanCast objects you first need to configure SpanCast by calling the static function `SpanCast::configure()`, typically from with the `setup()` portion of your sketch.  This function has a single required parameter: the SpanCast *Device ID* you wish to assign to that device.  Note the *Device ID* you assign needs to be unique across all devices running SpanCast, though there are optional arguments to `configure()` (described further below) that allow you to partition your SpanCast devices into distinct "networks" using an optional SpanCast *Network ID*, in the range of 0 through 65535 (default=1 if not specified).  SpanCast devices that share the same *Network ID* can send and receive messages to each other independently of any devices that may have the same *Device ID* but a different *Network ID*.
 
-### Creating SpanCast Objects
 
-Once SpanCast is configured, you can then instantiate SpanCast objects using the SpanCast constructor.  The constructor requires three arguments: the *Device ID* of the *remote* device (also running SpanCast) that you wish to communicate with; the size (in bytes) of the messages to be transmitted from your device to the remote device; and the size (in bytes) of the messages your device expects to receive from the remote device.  Either of the last two arguments may be zero if messages are only being either transmitted or received, but not both.  The SpanCast constructor also includes a number of optional arguments (described further below) that allow you to fine-tune various message transmission parameters.
-
-### Transmitting and Receiving Data
-
-After you have created a SpanCast object, you then simply call the `send()` method to transmit your message.  This method takes a pointer to another variable containing your message as its only argument.  Your message can represent a single number, a structure of numbers, a data buffer, or even an actual text message.  Anything that can be converted to a `(void *)` pointer can be sent.
-
-Receiving is just as easy.  Simply call the `get()` method.  This method also takes a `(void *)` pointer as its only argument, though in this case the pointer will be filled with the received message, *if it exists*.  The `get()` method returns `true` if data is found, else it returns `false`.  Repeatedly calling `get()` from within a loop is an easy way to "poll" your remote devices for incoming messages.
-
-### A Simple "Hello World" Example
 
 ## SpanCast Details
 
