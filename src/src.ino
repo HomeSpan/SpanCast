@@ -71,7 +71,7 @@ void setup() {
   
   for(int i=0;i<20;i++){
     SpanCast *x = new SpanCast(80+i,50,200,{.queueDepth=2});
-    //delete x;
+    delete x;
   }
 
   mem2=ESP.getFreeHeap();

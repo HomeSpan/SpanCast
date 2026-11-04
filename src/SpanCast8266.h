@@ -161,6 +161,12 @@ class SimpleQueue {
       queue[i]=(uint8_t *)calloc(nBytes,sizeof(uint8_t));
   }
 
+  ~SimpleQueue(){
+    for(int i=0;i<depth;i++)
+      free(queue[i]);
+    free(queue);
+  }
+
   boolean send(const void *data, boolean overWrite){
 
     if(nEntries<depth){
@@ -203,4 +209,5 @@ using QueueHandle_t = SpanCastPrivate::SimpleQueue*;
 #define xQueueSend(queue, data, unused_waitTime) queue->send(data,false)
 #define xQueueOverwrite(queue, data) queue->send(data,true)
 #define xQueueReceive(queue, data, waitTime) queue->receive(data,waitTime)
+#define vQueueDelete(queue) delete queue
 
