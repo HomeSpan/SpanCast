@@ -28,29 +28,33 @@ AND...
   * enables users to create custom, standalone ESP32-based sensors and controls that connect directly Apple HomeKit
   * low-power requirements of ESP-NOW mean such devices can be *battery-powered*
 
-## SpanCast Quick-Start Overview
+# SpanCast Quick-Start Overview
 
 SpanCast is implemented as a single C++ *class* providing both static functions and non-static methods.  To access SpanCast, simply add `#include "SpanCast.h"` to the top of your sketch.
 
-### Configure SpanCast and assign a SpanCast *Device ID*
+## Configure SpanCast and assign a SpanCast *Device ID*
 
 Before you can create SpanCast objects you need to first configure SpanCast and assign a unique 16-bit SpanCast *Device ID* to your device.  This ID is used by SpanCast to direct transmissions to, and identifying transmissions received from, other SpanCast devices.  To configure SpanCast and set the *Device ID* call the static function `SpanCast::configure(devID)`, where *devID* is the *Device ID* you wish to assign to your device.
 
-### Create one or more SpanCast Objects
+## Create one or more SpanCast Objects
 
-Once SpanCast is configured, you can then create SpanCast objects. Each SpanCast object represents a bi-directional communication link betweeen your device and another device. To create a SpanCast object, use the constructor `SpanCast(remoteDevID, sendSize, receiveSize)`, where *remoteDevID* is the *Device ID* of the device at the other end of the link, *sendSize* is the size (in bytes) of any messsages you intend to transmit to that device, and *receiveSize* is the size (in bytes) of any messsages you expect to receive from that device.  You may set *sendSize* to zero if messsages are not intended to transmitted to other devices using this link.  Similarly you may set *receiveSize* to zero if messages are not intended to be received from other devices using this link.
+Once SpanCast is configured, you can then create SpanCast objects. Each SpanCast object represents a bi-directional communication link betweeen your device and another device. To create a SpanCast object ("link"), use the constructor `SpanCast(remoteDevID, sendSize, receiveSize)`, where *remoteDevID* is the *Device ID* of the device at the other end of the link, *sendSize* is the size (in bytes) of any messsages you intend to transmit to that device, and *receiveSize* is the size (in bytes) of any messsages you expect to receive from that device.
 
-For the ESP32, neither *sendSize* nor *receiveSize* can exceed 1434 bytes.  For the ESP8266, that maximum is 214 bytes.[^maxSize]
+### Constraints
+
+* SpanCast can not transmit nor receive messages that are greater than 1434 bytes on the ESP32, and 214 bytes on the ESP8266.[^maxSize]  Thus the maximum allowed value that *sendSize* and *receiveSize* can each be set to is either 1434 (on the ESP32) or 214 (on the ESP8266).  For messages transmitted between an ESP32 and ESP8266, the lower maximum of 214 prevails.
+
+* You may set *sendSize* to zero if messsages are not intended to be transmitted to other devices using this link.  Similarly you may set *receiveSize* to zero if messages are not intended to be received from other devices using this link.  However, you can not set both *sendSize* and *receiveSize* to zero for the same link since there would be no point to creating such an object.
 
 [^maxSize]: The ESP-NOW v2 protocol used by the ESP32 limits the size of a message transmission to 1470 bytes of application data.  The ESP-NOW v1 protocol used by the ESP8266 limits this size to 250 bytes.  Since SpanCast needs to reserve 36 bytes of each message for a 32-byte HMAC signature and 4-byte nonce, this leaves a maximum of 1434 bytes per message on the ESP32, and 214 bytes per message on the ESP8266, for user data.
 
-### Transmit and Receive SpanCast Data Messages
+## Transmit and Receive SpanCast Data Messages
 
 After you have created a SpanCast object, simply call the `send(void *data)` method on that object to transmit the data referenced by the pointer *data* from your device to the device at the other end of the link.  The `send()` method returns *true* if the transmission succeeds, else *false* if it fails.
 
 To receive data from the device at the other end of the link simply call the `get(void *dataBuf)` method on that SpanCast object.  If data is available from that device, `get()` will return *true* and the received message will be copied to the variable referenced by the pointer *dataBuf*.  If data is not available to be received from that device, `get()` will instead return *false* and *dataBuf* will be unmodified.  Repeatedly calling `get()` from within a loop is an easy way to "poll" for incoming messages transmitted to your device from other SpanCast devices.
 
-### A Basic Transmitter/Receiver Example
+## A Basic Transmitter/Receiver Example
 
 Just using the above, we can create a pair of sketches in which one device transmits a simple counting integer to another device every 5 seconds.  In this example we will set the *Device ID* to 3 for the transmitter the *Device ID* to 5 for the receiver.  Here is the sketch for the transmitting device:
 
@@ -113,7 +117,7 @@ void loop() {}                                  // nothing is needed in the loop
 
 Note the differences in the SpanCast constructors in each sketch.  For the transmitter the second argument, *sendSize*, was set to the size of the counter and third argument, *receiveSize* was set to zero.  For the receiver, *sendSize* is set to zero and *receiveSize* is set to the size of the counter.
 
-## SpanCast Optional Settings
+# SpanCast Optional Settings
 
 SpanCast provides a variety of optional settings to modify the default behavior of the system. For ease of use, all settings that impact the global behavior of SpanCast are encapsulated into a single structure, *SpConfig_t*, that can be passed to `SpanCast::configure()` as an optional **second** argument. This structure, and the defaults for each setting if left unspecified, are as follows:
 
@@ -136,18 +140,22 @@ struct SpCast_t {
 }
 ```
 
-Note that you do not need to first create an instance of these structures as a separate object to be passes to their corresponding functions as an optional parameter.  Instead SpanCast has been designed to allow you to pass a brace-enclosed list of designated initializers to each function, where you only need to specifiy the settings you want to change.  For example:
+Note that you **do not** need to first create an instance of these structures as a separate object to be passes to their corresponding functions as an optional parameter.  Instead SpanCast has been designed to allow you to pass a brace-enclosed list of designated initializers to each function, where you only need to specify the settings you want to change.  For example:
 
 ```C++
+// using designated initializers to specify optional settings:
+
 SpanCast::configure(3, { .password="MyPassword", .numTries=2 } );
-SpanCast remoteDevice(5,sizeof(int),0,{ .queueDepth=2 });
+SpanCast remoteDevice(5, sizeof(int), 0, { .queueDepth=2 } );
 ```
 
-sets the *Device ID* to 3, changes the settings specified, and retains the defaults for all others.  Note that in C++, designated initializers *must* be specified in the same order as they appear in the structure definition.  Skipping settings is fine (as shown above), but specifiying them out of order (i.e. first .numTries followed by .passsword) will result in a compilation error.
+Remember that in C++, designated initializers *must* be specified in the same order as they appear in the structure definition.  Skipping settings is fine (the defaults above will be applied), but specifiying them out of order (i.e. first *.numTries* followed by *.passsword*) will result in a compilation error.
 
-The sections below discuss each of these settings, their purpose, and typical use cases.  We begin with the global settings structure, *SpConfig_t*, that can be passed to `SpanCast::configure()` as an optional second argument.
+## Optional Settings for *SpanCast::configure()*
 
-### SpanCast Network ID (*network* setting)
+The sections below fully describe the global settings structure, *SpConfig_t*, that can be passed to `SpanCast::configure()` as an optional second argument.
+
+### SpanCast Network ID (the *network* setting)
 
 Changing the *Network ID* of a device from its default value of 1 to any other 8-bit number by setting the *network* parameter allows you to create logically distinct SpanCast networks.  SpanCast *Device IDs* must be unique across all devices with the same *Network ID*, but they do not need to be unique across devices with different *Network IDs*.
 
@@ -155,17 +163,13 @@ For example, if you have one set of 5 devices serving as temperature sensors and
 
 Note that changing the *network* setting using `configure()` impacts the device's *Network ID* as well as all SpanCast objects constructued in your sketch.  When you call `send()` on a SpanCast object it uses both the *Device ID* associated with that specific object as well as the *Network ID* assigned in the sketch to direct transmissions and receive incoming messages. It is not possible to transmit or receive messages from devices with separate Network IDs regardless of their *Device IDs*.
 
-### SpanCast Encryption (*password* and *encrypt* settings)
+### SpanCast Encryption (the *password* and *encrypt* settings)
 
 By default, SpanCast configures the underlying ESP-NOW protocol to encrypt all message transmissions.  The default password is "spanCast123" though you can (and should) change this to something secret by setting the *password* parameter when calling `configure()`.  You can also disable encryption entirely for all SpanCast objects constructed in your sketch by setting the *encrypt* parameter to `false` when calling `configure()`.
 
-One reason you may wish to disable SpanCast encryption is resource limitations:  the underlying ESP-NOW protocol is restricted by the Arduino-ESP32 core to support the creation of a maximum of 20 SpanCast links per sketch, with no more than 7 of those links encrypted.  If your sketch needs 7 or less SpanCast links, your should keep encryption enabled (the default).  If your sketch requires 8 or more SpanCast links (subject to a total max of 20), you can accomodate this by disabling encryption.  Note SpanCast also provides a separate setting to enable or disable encryption on a per-link (i.e. specific to each Spancast object) basis, which allows you to create up to 7 encrypted and 13 unencrypted SpanCast links in a single sketch[^encryption8266].  See further below for this per-link setting.
+Apart from the obvious benefits of encryption to promote security, there are some important differences in how encryption also impacts the success and failure of message transmissions, as well as how SpanCast reports this from both the perspective of the transmitting device and the receiving device.  
 
-[^encryption8266]: The Arduino-ESP8266 core is slightly more generous and allows 10 of the 20 links to be encrypted.
-
-#### Transmission and Receipt Success/Failure vs. Encryption
-
-As described above, when transmitting a message over a SpanCast link using `send()`, SpanCast will return `true` if the transmission is successfully or `false` if it has failed.  However, this return status only indicates whether the sending device has received a low-level acknowledgement from the receiving device at the transport layer that the receiving device has indeed received all the bytes expected.  The receiving device performs this acknowledgement before it inspects the actual message, determines if it is encrypted, and tries to decrypt it.  This means that `send()` will return `true` even if the the receiving device cannot decrypt or properly process the message it received (e.g. there is no matching SpanCast link to receive the message).   The return status of `send()` will only be `false` if the intended receiving device is not powered or out of range of the transmitting device, or if WiFi channel auto-synchronization between the transmitting and receiving devices (as described in the next section) has failed.
+As discussed in previous sections, when transmitting a message over a SpanCast link using `send()`, SpanCast will return `true` if the transmission is successfully or `false` if it has failed.  However, this return status only indicates whether the sending device has received a low-level acknowledgement from the receiving device at the transport layer that the receiving device has indeed received all the bytes expected.  The receiving device performs this acknowledgement before it inspects the actual message, determines if it is encrypted, and tries to decrypt it.  This means that `send()` will return `true` even if the the receiving device cannot decrypt or properly process the message it received (e.g. there is no matching SpanCast link to receive the message).   The return status of `send()` will only be `false` if the intended receiving device is not powered or out of range of the transmitting device, or if WiFi channel auto-synchronization between the transmitting and receiving devices (as described in the next section) has failed.
 
 From the perspective of a receiving device successfully receiving a message, only after the WiFi transport layer sends a response back to the transmitting device acknowledging receipt of the message (and thus causing `send()` to return `true` on the transmitting device), does the underlying ESP-NOW protocol inspect the message itself.
 
@@ -173,10 +177,12 @@ If the message it receives is labeled as encrypted, ESP-NOW tries to decrypt the
 
 If instead the message it receives is labeled as unencrypted, ESP-NOW automatically passes the message to SpanCast for further processing regardless of whether encryption has been enabled on the receiving device or there is even a SpanCast link object created to receive the message.  SpanCast handles each of these situation (and more) gracefully and reports any such issues as part of its extensive diagnostics.
 
-However, because ESP-NOW does not indicater to SpanCasty whether the message it is passing was originally unencrypted, or was originally encrypyted but has been successfully decrypted, SpanCast has no way of knowing whether an unencrypted message was received on a SpanCast link that was configured for encryption. To address this potential security loop-hole, SpanCast adds a separate message authentication layer to every message transmitted.  Wheenever SpanCast receives a message, it checks to authentication data embedded in the message and it authentication fails, it reports a diagnostic warning an drops the message from further processing.  This means that the `get()` function will only return messages that have been authenticated by SpanCast regardless of whether encryption is enabled or disabled.  The password SpanCast uses for message authentication is derived from the *password* setting used in the call to `configure()` so....
+However, because ESP-NOW does not indicate to SpanCast whether the message it is passing was originally unencrypted, or was originally encrypyted but has been successfully decrypted, SpanCast has no way of knowing whether an unencrypted message was received on a SpanCast link that was configured for encryption. To address this potential security loop-hole, SpanCast adds a separate message authentication layer to every message transmitted.  Whenever SpanCast receives a message, it checks to authentication data embedded in the message and if authentication fails, it reports a diagnostic warning and drops the message from further processing.  This means that the `get()` function will only return messages that have been authenticated by SpanCast regardless of whether encryption is enabled or disabled.  Also, and perhaps most importantly, 
 
+> [!IMPORTANT]
+> The keys SpanCast uses for message authentication is derived from the *password* setting used in the call to `configure()` so even if you disable encryption, transmissions will only be successful between devices if the *password* settings match.
 
-### WiFi Channel Auto-Synchronization (*channelMask* and *numTries* settings)
+### WiFi Channel Auto-Synchronization (the *channelMask* and *numTries* settings)
 
 WiFi networks operating at 2.4 GHz span fourteen overlapping channels numbered 1-14 with regional limitations: in North America channels 1-11 are generally allowed; outside of North America channels 1-13 can be used; and in Japan channel 14 is also available for use in certain circumstances.  In order for WiFi transmissions from one device to be reliably received by another device, the WiFi radios on both devices must be set to the same channel.[^wifi]
 
@@ -198,7 +204,7 @@ If SpanCast still fails to transmit successfully after *numTries* attempts, it c
 
 However, if after trying channel 3 (the last channel allowed by *channelMask* in this example) the transmission is still unsuccessful, SpanCast will reset the channel back to 5 (where it started), terminate `send()` and return `false`.
 
-#### Use Cases
+#### Use Cases for the *channelMask* Setting
 
 The most common use case is a network topology where one or more standalone SpanCast devices serve as remote sensors transmitting data to a central SpanCast device that is connected to a central WiFi network, perhaps also connected to HomeKit, or maybe just running a Web Server to display the results of the remote sensors.  In this topology the *channelMask* is either left unspecified or set to zero (the default) on the device connected to the central WiFi network, and the *channelMask* on all other devices is set to use the widest range of allowable channels in your region.  This allows each remote device to auto-synchronize its WiFi channel to match that of the central device when it transmits to that device.  As a result, each remote device will naturally sync to the same channel, which thus enables transmissions from one remote device to any other as well. 
 
@@ -233,6 +239,51 @@ SpanCast provides two helper functions that convert a range or list of channels 
 
   * returns a *channelMask* allowing only those channels specified in *list*
   * example: `SpanCast::configure(3,{.channelMask=SpanCast::list( {1,3,5,6,9} )});`
+
+## Optional Settings for *SpanCast()*
+
+The sections below fully describe the per-link settings structure, *SpCast_t*, that can be passed to the `SpanCast()` constructor as an optional fourth argument.
+
+### Per-Link Encryption (the *encrypt* setting)
+
+This per-link setting allows you to enable encryption on some SpanCast links but disable it for others, while still retaining global control.  A specific link will be encrypted if **either** the global *encrypt* setting specified in the initial call to `configure()` is set to `true` (the default), **or** the *encrypt* setting specified in the SpanCast constructor for that link is set to `true`.  Encryption for a specific link will be disabled only if **both** the global *encrypt* setting **and** the *encrypt* setting specified in the SpanCast constructor for that link are set to `false`.
+
+Since the per-link *encrypt* setting for each SpanCast object defaults to *false* if left unspecified when the constructor is called, the global *encrypt* setting will generally govern whether any specific link will be encrypted.  To enable encryption for only a subset of SpanCast links, first set the global *encrypt* setting to `false` in the call to `configure()` and then set the per-link *encrypt* setting to `true` in the constructor for only those links you want encrypted.
+
+### Message Receiving Queues (the *queueDepth* setting)
+
+When a SpanCast link object is constructed with a non-zero value for *receiveSize*, SpanCast creates a FIFO ("first-in-first-out") **receiving queue** to store incoming messages directed to that link for later retrieval by the `get()` method.  For each link, the *queueDepth* setting determines the size and behavior of this queue.
+
+* If *queueDepth* is set to zero (the default), SpanCast stores only the last message received and overwrites that message if a new one arrives before the first one is read by `get()`.  This ensures the call to `get()` will always yield the most recent message received for that link.
+
+* If *queueDepth* is set to any number greater than zero, SpanCast reserves space in the queue to store *queueDepth* messages.  Each call to `get()` returns a single message (in FIFO order), which reduces the number of messages remaining in the queue.  However, if the queue is fully filled before `get()` is called, SpanCast will drop any new messages received until a subsequent call to `get()` opens up more space.
+
+In a typical sketch `get()` is called much more frequently than incoming messages are received so the default setting (*queueDepth=0*) should work fine.
+
+### Active/Inactive Receiving Status (the *timeout* setting)
+
+For each link, SpanCast retains the time of the most recent message received to ascertain whether the remote device that is supposed to send such messages is active or inactive.  This time is snapped upon initial validation of the message and does not depend on whether the message has been stored in that link's receive queue (e.g. the queue is full) or has yet been retrieved by calling the `get()` method.
+
+The active/inactive state determined by SpanCast can be read by calling the `isActive()` method for any SpanCast object.  This function returns `true` if the last message received for that link has been within *timeout* milliseconds, else the function returns `false`.
+
+The *timeout* setting defaults to 60,000 (i.e. 60 seconds) if left unspecified when constructing a SpanCast link.  Use of `isActive()` is completely optional, though if you decide to use it in your sketch to estimate whether a remote device may have gone off-line or is out of range, you should set *timeout* to be **longer** than the period that the remote device is expected to send messages.  For example, if you have a remote sensor that is programmed to send temperature readings every 30 seconds, setting *timeout* to 90,000 for the link that is receiving those messages means that the call to `isActive()` will return `true` even if an occassional message is dropped, but will return `false` after an extended time of not receiving any messages from the remote device has passed.
+
+Note that upon start-up `isActive()` will return `false` for any given link until that link has received its first message.  Also note that `isActive()` only pertains to messages received, not messages transmitted, and thus will always return `false` for a SpanCast link configured as transmit-only (i.e. *receiveSize=0*).
+
+# SpanCast Errors, Warnings, and Diagnostic Messages
+
+## Maximum Number of SpanCast Links
+
+There is no limit to the number of **unencrypted**, **receive-only** SpanCast links you can create (i.e *encrypt=false* **and** *sendSize=0*). For encrypted links (i.e. *encrypt=true*) as well as any link that can transmit data (i.e. *sendSize>0*) the following limits apply:
+
+|Chip|Encrypted Links|Total Links|
+|:---:|:---:|:---:|
+|ESP32|7|20|
+|ESP8266|10|20|
+
+
+
+
 
 ### Example Sketches
 
