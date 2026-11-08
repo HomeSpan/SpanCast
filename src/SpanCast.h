@@ -115,14 +115,16 @@ class SpanCast {
   static uint8_t nextChannel(uint8_t channel);
   static boolean allowedChannel(uint8_t channel);
 
-  public:
-
   static constexpr char VERSION[] = "1.0.0";
   static const int MAX_MESSAGE_SIZE = ESP_NOW_MAX_DATA_LEN_V2-crypto_auth_BYTES-sizeof(uint32_t);
+
+  public:
 
   static boolean configure(uint16_t deviceID, SpConfig_t cfg=SpConfig_t::getDefault());
   static uint16_t range(uint8_t start, uint8_t end);
   static uint16_t list(std::initializer_list<uint8_t> list);
+  static int maxMessageSize(){return(MAX_MESSAGE_SIZE);}
+  static const char *version(){return(VERSION);}
 
   SpanCast(uint16_t deviceID, size_t sendSize, size_t receiveSize, SpCast_t settings=SpCast_t::getDefault());
   ~SpanCast();

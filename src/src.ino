@@ -48,7 +48,10 @@ void setup() {
   uint8_t windSpeed=10;
   char barometerMessage[64];
 
-  Serial.printf("\n\nWind Speed Sensor Ready.\n\n");
+  Serial.printf("\n\n");
+  Serial.printf("SpanCast Version: %s\n",SpanCast::version());
+  Serial.printf("Max Message Size: %d\n",SpanCast::maxMessageSize());
+  Serial.printf("Wind Speed Sensor Ready.\n\n");
 
   SpanCast::configure(WIND_SPEED_DEVICE_ID,{.encrypt=false,.channelMask=SpanCast::range(1,11)});
 

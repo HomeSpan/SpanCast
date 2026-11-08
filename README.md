@@ -147,7 +147,7 @@ SpanCast::configure(3, { .password="MyPassword", .numTries=2 } );
 SpanCast remoteDevice(5, sizeof(int), 0, { .queueDepth=2 } );
 ```
 
-Remember that in C++, designated initializers *must* be specified in the same order as they appear in the structure definition.  Skipping settings is fine (the defaults above will be applied), but specifiying them out of order (i.e. first *.numTries* followed by *.passsword*) will result in a compilation error.
+Remember that in C++, designated initializers *must* be specified in the same order as they appear in the structure definition.  Skipping settings is fine (the defaults above will be applied), but specifying them out of order (i.e. first *.numTries* followed by *.passsword*) will result in a compilation error.
 
 ## Optional Settings for *SpanCast::configure()*
 

@@ -151,6 +151,7 @@ SpanCast::SpanCast(uint16_t deviceID, size_t sendSize, size_t receiveSize, SpCas
     free(keyContext);
 
     int status;
+    ESP_LOGD(DIAG_TAG,"-> Adding Peer");
 
     #ifdef ARDUINO_ARCH_ESP32
       peerInfo.channel=0;                             // 0 = matches current WiFi channel
@@ -172,13 +173,15 @@ SpanCast::SpanCast(uint16_t deviceID, size_t sendSize, size_t receiveSize, SpCas
   }
 
   if(receiveSize>0){
+    ESP_LOGD(DIAG_TAG,"-> Creating Receive Queue");
     receiveQueue = xQueueCreate(spCast.queueDepth>0?spCast.queueDepth:1,receiveSize);
-    overwriteQueue=(spCast.queueDepth==0);
+    overwriteQueue = (spCast.queueDepth==0);
   }
 
   initialized=true;
 
   portENTER_CRITICAL(&receiveLock);
+  ESP_LOGD(DIAG_TAG,"-> Adding Vector Entry");
   SpanCasts.push_back(this);
   portEXIT_CRITICAL(&receiveLock);
 
