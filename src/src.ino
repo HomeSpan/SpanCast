@@ -52,35 +52,8 @@ void setup() {
 
   SpanCast::configure(WIND_SPEED_DEVICE_ID,{.encrypt=false,.channelMask=SpanCast::range(1,11)});
 
-  SpanCast *temp=new SpanCast(20,30,0);
-  SpanCast *temp2=new SpanCast(30,30,10);
   SpanCast tempHumSensor(TEMP_HUM_DEVICE_ID,sizeof(windSpeed),sizeof(tempHum),{.encrypt=true});
-  delete temp;
-  delete temp2;
-  SpanCast *temp3=new SpanCast(20,30,5000);
-  delete temp3;
   SpanCast barometerSensor(BAROMETER_DEVICE_ID,sizeof(windSpeed),sizeof(barometerMessage));
-  SpanCast *temp4=new SpanCast(20,0,50);
-  delete temp4;
-
-
-  uint32_t mem1=ESP.getFreeHeap();
-  uint32_t mem2;
-
-  Serial.printf("Heap: %d\n",mem1);
-  
-  for(int i=0;i<20;i++){
-    SpanCast *x = new SpanCast(80+i,50,200,{.queueDepth=2});
-    delete x;
-  }
-
-  mem2=ESP.getFreeHeap();
-
-  Serial.printf("Heap: %d  %d\n",mem2,mem1-mem2);
-
-
-  while(1)
-    delay(1000);
 
   uint32_t updateTime=0;
 

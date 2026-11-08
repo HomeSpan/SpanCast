@@ -32,29 +32,27 @@ AND...
 
 SpanCast is implemented as a single C++ *class* providing both static functions and non-static methods.  To access SpanCast, simply add `#include "SpanCast.h"` to the top of your sketch.
 
-## Configure SpanCast and assign a SpanCast *Device ID*
+## Step 1: Configure SpanCast and assign a SpanCast *Device ID*
 
-Before you can create SpanCast objects you need to first configure SpanCast and assign a unique 16-bit SpanCast *Device ID* to your device.  This ID is used by SpanCast to direct transmissions to, and identifying transmissions received from, other SpanCast devices.  To configure SpanCast and set the *Device ID* call the static function `SpanCast::configure(devID)`, where *devID* is the *Device ID* you wish to assign to your device.
+Before you can create SpanCast objects you need to first configure SpanCast and assign a unique 16-bit SpanCast *Device ID* to your device.  This ID is used by SpanCast to direct transmissions to, and identifying transmissions received from, other SpanCast devices.  To configure SpanCast and set the *Device ID* call the static function `SpanCast::configure(deviceID)`, where *deviceID* is the *Device ID* you wish to assign to your device.
 
-## Create one or more SpanCast Objects
+## Step 2: Create one or more SpanCast Objects
 
-Once SpanCast is configured, you can then create SpanCast objects. Each SpanCast object represents a bi-directional communication link betweeen your device and another device. To create a SpanCast object ("link"), use the constructor `SpanCast(remoteDevID, sendSize, receiveSize)`, where *remoteDevID* is the *Device ID* of the device at the other end of the link, *sendSize* is the size (in bytes) of any messsages you intend to transmit to that device, and *receiveSize* is the size (in bytes) of any messsages you expect to receive from that device.
+Once SpanCast is configured, you can then create SpanCast objects. Each SpanCast object represents a bi-directional communication link betweeen your device and another device. To create a SpanCast object ("link"), use the constructor `SpanCast(deviceID, sendSize, receiveSize)`, where *deviceID* is the *Device ID* of the device **at the other end of the link**, *sendSize* is the size (in bytes) of any messsages you intend to transmit to that device, and *receiveSize* is the size (in bytes) of any messsages you expect to receive from that device.
 
-### Constraints
+As a result of message size limitations in ESP-NOW protcol, the maximum allowed value for *sendSize* and *receiveSize* is 1434 bytes on ESP32 devices and 214 bytes on ESP8266 devices.[^maxSize]  For messages transmitted between an ESP32 and ESP8266, the lower maximum of 214 prevails.
 
-* SpanCast can not transmit nor receive messages that are greater than 1434 bytes on the ESP32, and 214 bytes on the ESP8266.[^maxSize]  Thus the maximum allowed value that *sendSize* and *receiveSize* can each be set to is either 1434 (on the ESP32) or 214 (on the ESP8266).  For messages transmitted between an ESP32 and ESP8266, the lower maximum of 214 prevails.
-
-* You may set *sendSize* to zero if messsages are not intended to be transmitted to other devices using this link.  Similarly you may set *receiveSize* to zero if messages are not intended to be received from other devices using this link.  However, you can not set both *sendSize* and *receiveSize* to zero for the same link since there would be no point to creating such an object.
+Note you may set *sendSize* to zero if messsages are not intended to be transmitted to other devices using this link.  Similarly you may set *receiveSize* to zero if messages are not intended to be received from other devices using this link.  However, you can not set both *sendSize* and *receiveSize* to zero for the same link since there would be no point to creating such an object.
 
 [^maxSize]: The ESP-NOW v2 protocol used by the ESP32 limits the size of a message transmission to 1470 bytes of application data.  The ESP-NOW v1 protocol used by the ESP8266 limits this size to 250 bytes.  Since SpanCast needs to reserve 36 bytes of each message for a 32-byte HMAC signature and 4-byte nonce, this leaves a maximum of 1434 bytes per message on the ESP32, and 214 bytes per message on the ESP8266, for user data.
 
-## Transmit and Receive SpanCast Data Messages
+## Step 3: Transmit and Receive SpanCast Data Messages
 
 After you have created a SpanCast object, simply call the `send(void *data)` method on that object to transmit the data referenced by the pointer *data* from your device to the device at the other end of the link.  The `send()` method returns *true* if the transmission succeeds, else *false* if it fails.
 
 To receive data from the device at the other end of the link simply call the `get(void *dataBuf)` method on that SpanCast object.  If data is available from that device, `get()` will return *true* and the received message will be copied to the variable referenced by the pointer *dataBuf*.  If data is not available to be received from that device, `get()` will instead return *false* and *dataBuf* will be unmodified.  Repeatedly calling `get()` from within a loop is an easy way to "poll" for incoming messages transmitted to your device from other SpanCast devices.
 
-## A Basic Transmitter/Receiver Example
+# A Basic Transmitter/Receiver Example
 
 Just using the above, we can create a pair of sketches in which one device transmits a simple counting integer to another device every 5 seconds.  In this example we will set the *Device ID* to 3 for the transmitter the *Device ID* to 5 for the receiver.  Here is the sketch for the transmitting device:
 
@@ -272,7 +270,11 @@ Note that upon start-up `isActive()` will return `false` for any given link unti
 
 # SpanCast Errors, Warnings, and Diagnostic Messages
 
-## Maximum Number of SpanCast Links
+SpanCast uses the ESP32's standard Log Library to provide 4 levels of diagnostic messages: **Errors**, **Warnings**, **Info**, and **Debug**.  You can select the level of logging via the *Core Debug Level* option under the *Tools* menu of the Arduino IDE.  Select **Errors** or **Warnings** for minimal, but important, output.  Select **Info** if you'd like to see the inner workings of internal SpanCast processes, such as WiFi synchronization.  The **Debug** level provides even more details that are useful for debugging the library itself.  Note you must recompile your sketch after selecting a new logging level for it to take effect.  
+
+Since the legacy ESP8266 does not include a Log Library, SpanCast simply writes all log messages, regardless of level, directly to the Serial Monitor if you select the **WIFI** option (or any option that includes **WIFI**) as the *Debug Level* under the *Tools* menu of the Arduino IDE.  Note that in contrast to the Log Library used by SpanCast on the ESP32, on the ESP8266 you must initialize the Serial Monitor in your sketch (e.g. `Serial.begin()`) to see these log messages.
+
+# Maximum Number of SpanCast Links
 
 There is no limit to the number of **unencrypted**, **receive-only** SpanCast links you can create (i.e *encrypt=false* **and** *sendSize=0*). For encrypted links (i.e. *encrypt=true*) as well as any link that can transmit data (i.e. *sendSize>0*) the following limits apply:
 
@@ -281,13 +283,13 @@ There is no limit to the number of **unencrypted**, **receive-only** SpanCast li
 |ESP32|7|20|
 |ESP8266|10|20|
 
+# Example Sketches
+
+In addition to the Basic Transmitter/Receiver Example sketches shown above, SpanCast includes a more detailed "WeatherStation" example that demonstrates bi-direction communication among 3 different devices.  These sketches can be found under the *File → Examples* menu of the Arduino IDE.  In addition, a detailed example showing how SpanCast can be used to create a remote temperature sensor that interacts directly with HomeKit is provided as part of the [HomeSpan](https://github.com/HomeSpan/HomeSpan) Library.
+
+# The Complete SpanCast API 
 
 
-
-
-### Example Sketches
-
-Below is a simple example showing the sketches for one device transmitting a simple counting variable to another device.  For those new to C++, note that in the first sketch we kept all the logic in the Arduino `setup()` function and were able to instantiate a local SpanCast object.  But in the second sketch we placed the SpanCast polling logic in the Arduino `loop()` function, which required the use of a global SpanCast pointer that is instantiated in the `setup()` function using `new`.  The reason for these differences is purely for demonstration purposes.  Both sketches could have been structured in the same manner.
 
 ## Technical Details (for those interested)
 
