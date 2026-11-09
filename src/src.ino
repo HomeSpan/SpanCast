@@ -25,94 +25,39 @@
  *  
  ********************************************************************************/
 
-#include "SpanCast.h"  
-  
-#define TEMP_HUM_DEVICE_ID      1   // SpanCast Device ID for the Temperature+Humidity Sensor
-#define WIND_SPEED_DEVICE_ID    2   // SpanCast Device ID for the Wind Speed Sensor
-#define BAROMETER_DEVICE_ID     3   // SpanCast Device ID for the Barometric Pressure Sensor
+#include "SpanCast.h"
 
-#define UPDATE_FREQUENCY     8000   // how frequently (in millseconds) for this device to send out updates
-
-//////////////////////
-
-void setup() {
+void setup(){
 
   Serial.begin(115200);
   delay(2000);
 
-  struct {
-    float temperature;
-    uint8_t humidity;
-  } tempHum;
+  Serial.printf("\n\nSpanCast Basic Transmitter Example\n\n");
+  Serial.printf("MODE: %d\n",WiFi.getMode());
 
-  uint8_t windSpeed=10;
-  char barometerMessage[64];
+  int counter=0;                                // define and initialize a simple integer counter
+  SpanCast::configure(3,{ .channelMask=SpanCast::range(1,11)});                       // configure SpanCast and set Device ID=3
+  SpanCast myLink(5, sizeof(counter), 0);       // construct SpanCast object with link to device with Device ID=5
 
-  Serial.printf("\n\n");
-  Serial.printf("SpanCast Version: %s\n",SpanCast::version());
-  Serial.printf("Max Message Size: %d\n",SpanCast::maxMessageSize());
-  Serial.printf("Wind Speed Sensor Ready.\n\n");
+  do {
+    Serial.printf("Transmitting counter=%d to other device...",counter);
 
-  SpanCast::configure(WIND_SPEED_DEVICE_ID,{.encrypt=false,.channelMask=SpanCast::range(1,11)});
+    boolean status = myLink.send(&counter);   // transmit counter and save the returned status
 
-  SpanCast tempHumSensor(TEMP_HUM_DEVICE_ID,sizeof(windSpeed),sizeof(tempHum),{.encrypt=true});
-  SpanCast barometerSensor(BAROMETER_DEVICE_ID,sizeof(windSpeed),sizeof(barometerMessage));
+    if(status)                                // indicate whether transmission succeeded or failed
+      Serial.printf("Success!\n");
+    else
+      Serial.printf("Failed!\n");
 
-  uint32_t updateTime=0;
+    // while(1){
+    //   Serial.printf("Channel: %d %d\n",WiFi.getMode(),WiFi.channel());
+    //   delay(1000);
+    // }
 
-  while(1){
 
-    if(millis()-updateTime > UPDATE_FREQUENCY){
-
-      windSpeed++;
-      if(windSpeed>30)
-        windSpeed=10;
-
-      Serial.printf("Sending to Temp/Hum Sensor -> Lastest Wind Speed Reading ... ");
-
-      if(tempHumSensor.send(&windSpeed))
-        Serial.printf("Succeeded\n");
-      else
-        Serial.printf("Failed\n");
-
-      Serial.printf("Sending to Barometer Sensor -> Lastest Wind Speed Reading ... ");
-
-      if(barometerSensor.send(&windSpeed))
-        Serial.printf("Succeeded\n");
-      else
-        Serial.printf("Failed\n");
-
-      Serial.printf("\n---------------------------\n");
-      if(tempHumSensor.isActive()){
-        Serial.printf("Temperature:  %0.1fC\n",tempHum.temperature);
-        Serial.printf("Humidity:     %d%%\n",tempHum.humidity);
-      } else {
-        Serial.printf("Temperature:  ---\n");
-        Serial.printf("Humidity:     ---\n");
-      }
-      Serial.printf("Wind Speed:   %d km/hr\n",windSpeed);
-      if(barometerSensor.isActive())
-        Serial.printf("Barometer:    %s\n",barometerMessage);
-      else
-        Serial.printf("Barometer:    ---\n");
-      Serial.printf("---------------------------\n\n");
-
-      updateTime=millis();   
-    }
-
-    if(tempHumSensor.get(&tempHum))
-      Serial.printf("Received from Temp/Hum Sensor: Temp=%0.1f, Hum=%d\n",tempHum.temperature,tempHum.humidity);
-
-    if(barometerSensor.get(barometerMessage))
-      Serial.printf("Received from Barometer Sensor: Bar=%s\n",barometerMessage);
-
-    delay(1);
-  }
+    counter++;                                // increment counter
+    delay(5000);                              // delay 5 seconds
+  } while(1);                                 // repeat indefinitely
 }
 
-//////////////////////
-
-void loop() {
-}
-
-//////////////////////
+void loop() {}                                          // nothing is needed in the loop() function

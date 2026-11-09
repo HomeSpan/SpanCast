@@ -54,7 +54,9 @@ boolean SpanCast::configure(uint16_t deviceID, SpConfig_t cfg){
   #ifdef ARDUINO_ARCH_ESP32
     esp_wifi_set_mac(WIFI_IF_AP, deviceAddress->mac);
   #else
+    wifi_promiscuous_enable(true);
     wifi_set_macaddr(STATION_IF, deviceAddress->mac);
+    wifi_promiscuous_enable(false);
   #endif
 
   esp_now_init();
