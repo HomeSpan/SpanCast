@@ -57,17 +57,33 @@ static const uint8_t portMUX_INITIALIZER_UNLOCKED=0;
 #define esp_wifi_get_country(country)  (wifi_get_country(country))
 #define esp_random() (RANDOM_REG32)
 
-#ifdef DEBUG_ESP_WIFI
+#if defined(DEBUG_ESP_CORE) || defined(DEBUG_ESP_WIFI) || defined(DEBUG_ESP_HTTP_UPDATE) || defined(DEBUG_ESP_UPDATER) || defined(DEBUG_ESP_OTA)
   #define ESP_LOGE(TAG,format,...) {Serial.printf("[%6d][E][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
-  #define ESP_LOGW(TAG,format,...) {Serial.printf("[%6d][W][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
-  #define ESP_LOGI(TAG,format,...) {Serial.printf("[%6d][I][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
-  #define ESP_LOGD(TAG,format,...) {Serial.printf("[%6d][D][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
-  #define ESP_LOGV(TAG,format,...) {Serial.printf("[%6d][V][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
 #else
   #define ESP_LOGE(TAG,format,...) { (void)0; }
+#endif
+
+#if defined(DEBUG_ESP_WIFI) || defined(DEBUG_ESP_HTTP_UPDATE) || defined(DEBUG_ESP_UPDATER) || defined(DEBUG_ESP_OTA)
+  #define ESP_LOGW(TAG,format,...) {Serial.printf("[%6d][W][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+#else
   #define ESP_LOGW(TAG,format,...) { (void)0; }
+#endif
+
+#if defined(DEBUG_ESP_HTTP_UPDATE) || defined(DEBUG_ESP_UPDATER) || defined(DEBUG_ESP_OTA)
+  #define ESP_LOGI(TAG,format,...) {Serial.printf("[%6d][I][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+#else
   #define ESP_LOGI(TAG,format,...) { (void)0; }
+#endif
+
+#if defined(DEBUG_ESP_UPDATER) || defined(DEBUG_ESP_OTA)
+  #define ESP_LOGD(TAG,format,...) {Serial.printf("[%6d][D][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+#else
   #define ESP_LOGD(TAG,format,...) { (void)0; }
+#endif
+
+#if defined(DEBUG_ESP_OTA)
+  #define ESP_LOGV(TAG,format,...) {Serial.printf("[%6d][V][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+#else
   #define ESP_LOGV(TAG,format,...) { (void)0; }
 #endif
 

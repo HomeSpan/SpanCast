@@ -33,11 +33,11 @@ void setup(){
   delay(2000);
 
   Serial.printf("\n\nSpanCast Basic Transmitter Example\n\n");
-  Serial.printf("MODE: %d\n",WiFi.getMode());
 
   int counter=0;                                // define and initialize a simple integer counter
   SpanCast::configure(3,{ .channelMask=SpanCast::range(1,11)});                       // configure SpanCast and set Device ID=3
   SpanCast myLink(5, sizeof(counter), 0);       // construct SpanCast object with link to device with Device ID=5
+  new SpanCast(5,0,0);
 
   do {
     Serial.printf("Transmitting counter=%d to other device...",counter);
@@ -48,12 +48,6 @@ void setup(){
       Serial.printf("Success!\n");
     else
       Serial.printf("Failed!\n");
-
-    // while(1){
-    //   Serial.printf("Channel: %d %d\n",WiFi.getMode(),WiFi.channel());
-    //   delay(1000);
-    // }
-
 
     counter++;                                // increment counter
     delay(5000);                              // delay 5 seconds

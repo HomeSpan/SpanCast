@@ -52,6 +52,7 @@ void setup(){
   do {
     if( myLink.get(&counter) )                                              // check if a message has been received from the other device     
       Serial.printf("Received counter=%d from other device.\n",counter);    // if so, print it
+      delay(1);                                                             // yield to any other processes
   } while(1);                                   // repeat indefinitely
 }
 
