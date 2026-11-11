@@ -195,7 +195,7 @@ SpanCast::SpanCast(uint16_t deviceID, size_t sendSize, size_t receiveSize, SpCas
 
 SpanCast::~SpanCast(){
 
-  const SpAddress *destAddress = (SpAddress *)peerInfo.peer_addr;
+  [[maybe_unused]]const SpAddress *destAddress = (SpAddress *)peerInfo.peer_addr;
   ESP_LOGI(DIAG_TAG,"Deleting SpanCast object with DeviceID=%hu and freeing resources...",destAddress->devID);
 
   if(!initialized)
