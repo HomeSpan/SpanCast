@@ -27,11 +27,11 @@
 
 #include "SpanCast.h"  
 
-#define TEMP_HUM_DEVICE_ID      1000   // SpanCast Device ID for the Temperature+Humidity Sensor
-#define WIND_SPEED_DEVICE_ID    2000   // SpanCast Device ID for the Wind Speed Sensor
-#define BAROMETER_DEVICE_ID     3000   // SpanCast Device ID for the Barometric Pressure Sensor
+#define TEMP_HUM_DEVICE_ID      1   // SpanCast Device ID for the Temperature+Humidity Sensor
+#define WIND_SPEED_DEVICE_ID    2   // SpanCast Device ID for the Wind Speed Sensor
+#define BAROMETER_DEVICE_ID     3   // SpanCast Device ID for the Barometric Pressure Sensor
 
-#define UPDATE_FREQUENCY     13000   // how frequently (in millseconds) for this device to send out updates
+#define UPDATE_FREQUENCY     13000  // how frequently (in millseconds) for this device to send out updates
 
 //////////////////////
 
@@ -48,7 +48,8 @@ void setup() {
   uint8_t windSpeed;
   char barometerMessage[64]="Steady";
 
-  Serial.printf("\n\nBarometer Sensor Ready.\n\n");
+  Serial.printf("\n\nSpanCast Version: %s\n",SpanCast::version());
+  Serial.printf("Barometer Sensor Ready.\n\n");
 
   SpanCast::configure(BAROMETER_DEVICE_ID,{.network=4,.encrypt=false,.channelMask=SpanCast::range(1,11)});
 
@@ -59,6 +60,12 @@ void setup() {
 
   while(1){
 
+    if(windSpeedSensor.get(&windSpeed))
+      Serial.printf("Received from Wind Speed Sensor: Wind=%d\n",windSpeed);
+
+    if(tempHumSensor.get(&tempHum))
+      Serial.printf("Received from Temp/Hum Sensor: Temp=%0.1f, Hum=%d\n",tempHum.temperature,tempHum.humidity);
+    
     if(millis()-updateTime > UPDATE_FREQUENCY){
 
       if(!strcasecmp(barometerMessage,"Rising"))
@@ -99,12 +106,6 @@ void setup() {
 
       updateTime=millis();        
     }
-
-    if(windSpeedSensor.get(&windSpeed))
-      Serial.printf("Received from Wind Speed Sensor: Wind=%d\n",windSpeed);
-
-    if(tempHumSensor.get(&tempHum))
-      Serial.printf("Received from Temp/Hum Sensor: Temp=%0.1f, Hum=%d\n",tempHum.temperature,tempHum.humidity);
 
     delay(1);
   }

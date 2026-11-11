@@ -27,9 +27,9 @@
 
 #include "SpanCast.h"  
 
-#define TEMP_HUM_DEVICE_ID      1000   // SpanCast Device ID for the Temperature+Humidity Sensor
-#define WIND_SPEED_DEVICE_ID    2000   // SpanCast Device ID for the Wind Speed Sensor
-#define BAROMETER_DEVICE_ID     3000   // SpanCast Device ID for the Barometric Pressure Sensor
+#define TEMP_HUM_DEVICE_ID      1   // SpanCast Device ID for the Temperature+Humidity Sensor
+#define WIND_SPEED_DEVICE_ID    2   // SpanCast Device ID for the Wind Speed Sensor
+#define BAROMETER_DEVICE_ID     3   // SpanCast Device ID for the Barometric Pressure Sensor
 
 #define UPDATE_FREQUENCY     5000   // how frequently (in millseconds) for this device to send out updates
 
@@ -48,7 +48,8 @@ void setup() {
   uint8_t windSpeed=0;
   char barometerMessage[64]="";
 
-  Serial.printf("\n\nTemperature and Humidity Sensor Ready.\n\n");
+  Serial.printf("\n\nSpanCast Version: %s\n",SpanCast::version());
+  Serial.printf("Temperature and Humidity Sensor Ready.\n\n");
 
   SpanCast::configure(TEMP_HUM_DEVICE_ID,{.network=4,.channelMask=SpanCast::range(1,11)});
 
@@ -64,17 +65,7 @@ void setup() {
 
     if(barometerSensor.get(barometerMessage))
       Serial.printf("Received from Barometer Sensor: Bar=%s\n",barometerMessage);
-
-    if(windSpeed>0 && !windSpeedSensor.isActive()){
-      Serial.printf("Lost contact Wind Speed Sensor!\n");
-      windSpeed=0;     
-    }
-
-    if(strlen(barometerMessage) && !barometerSensor.isActive()){
-      Serial.printf("Lost contact Barometer Sensor!\n");
-      sprintf(barometerMessage,"");
-    }
-
+    
     if(millis()-updateTime > UPDATE_FREQUENCY){
 
       tempHum.temperature+=0.6;
@@ -102,11 +93,11 @@ void setup() {
       Serial.printf("\n---------------------------\n");
       Serial.printf("Temperature:  %0.1fC\n",tempHum.temperature);
       Serial.printf("Humidity:     %d%%\n",tempHum.humidity);
-      if(windSpeed>0)
+      if(windSpeedSensor.isActive())
         Serial.printf("Wind Speed:   %d km/hr\n",windSpeed);
       else
         Serial.printf("Wind Speed:   ---\n");
-      if(strlen(barometerMessage))
+      if(barometerSensor.isActive())
         Serial.printf("Barometer:    %s\n",barometerMessage);
       else
         Serial.printf("Barometer:    ---\n");
