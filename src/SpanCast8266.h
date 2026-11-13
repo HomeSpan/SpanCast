@@ -49,11 +49,6 @@ struct esp_now_peer_info_t {
 
 using esp_now_send_status_t = uint8_t;
 
-using portMUX_TYPE = uint8_t;
-static const uint8_t portMUX_INITIALIZER_UNLOCKED=0;
-#define portENTER_CRITICAL(x) { (void)0; }
-#define portEXIT_CRITICAL(x) { (void)0; }
-
 #define esp_wifi_get_country(country)  (wifi_get_country(country))
 #define esp_random() (RANDOM_REG32)
 

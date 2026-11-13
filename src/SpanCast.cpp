@@ -28,6 +28,7 @@
  
 #include "SpanCast.h"
 #include <EEPROM.h>
+#include <mutex>
 
 ///////////////////////////////
 
@@ -153,7 +154,6 @@ SpanCast::SpanCast(uint16_t deviceID, size_t sendSize, size_t receiveSize, SpCas
     free(keyContext);
 
     int status;
-    ESP_LOGD(DIAG_TAG,"-> Adding Peer");
 
     #ifdef ARDUINO_ARCH_ESP32
       peerInfo.channel=0;                             // 0 = matches current WiFi channel
@@ -182,13 +182,18 @@ SpanCast::SpanCast(uint16_t deviceID, size_t sendSize, size_t receiveSize, SpCas
 
   initialized=true;
 
-  portENTER_CRITICAL(&receiveLock);
-  ESP_LOGD(DIAG_TAG,"-> Adding Vector Entry");
-  SpanCasts.push_back(this);
-  portEXIT_CRITICAL(&receiveLock);
-
   ESP_LOGI(DIAG_TAG,"Initialized new SpanCast object with DeviceID=%hu / SendSize=%d / ReceiveSize=%d / QueueDepth=%d / Encryption=%s.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X",deviceID,sendSize,receiveSize,spCast.queueDepth,
           spCast.encrypt?"TRUE":"False",destAddress.mac[0],destAddress.mac[1],destAddress.mac[2],destAddress.mac[3],destAddress.mac[4],destAddress.mac[5]);
+
+  if(esp_now_is_peer_exist(peerInfo.peer_addr))
+    ESP_LOGD(DIAG_TAG,"-> Added Peer");
+
+  if(receiveSize>0)
+    ESP_LOGD(DIAG_TAG,"-> Added Receive Queue");
+
+  ESP_LOGD(DIAG_TAG,"-> Added Vector Entry");
+  std::unique_lock lock(receiveLock);
+  SpanCasts.push_back(this);
 }
 
 ///////////////////////////////
@@ -201,26 +206,24 @@ SpanCast::~SpanCast(){
   if(!initialized)
     return;
 
-  portENTER_CRITICAL(&receiveLock);
+  std::unique_lock lock(receiveLock);
 
   auto it=SpanCasts.begin();                          // remove object from SpanCasts vector
   for(;it!=SpanCasts.end() && (*it)!=this;it++);
   if(it!=SpanCasts.end()){                            // this should always be the case, but check anyway
-    ESP_LOGD(DIAG_TAG,"-> Deleting Vector Entry");
     SpanCasts.erase(it);
+    ESP_LOGD(DIAG_TAG,"-> Deleted Vector Entry");
   }
 
   if(receiveSize>0){                                  // delete receive queue if it exists
-    ESP_LOGD(DIAG_TAG,"-> Deleting Receive Queue");
     vQueueDelete(receiveQueue);
+    ESP_LOGD(DIAG_TAG,"-> Deleted Receive Queue");
   }
 
   if(esp_now_is_peer_exist(peerInfo.peer_addr)){       // delete peer if it exists
-    ESP_LOGD(DIAG_TAG,"-> Deleting Peer");
     esp_now_del_peer(peerInfo.peer_addr);
+    ESP_LOGD(DIAG_TAG,"-> Deleted Peer");
   }
-
-  portEXIT_CRITICAL(&receiveLock);
 }
 
 ///////////////////////////////
@@ -280,9 +283,7 @@ boolean SpanCast::get(void *dataBuf){
   if(receiveSize==0)
     return(false);
 
-  portENTER_CRITICAL(&receiveLock);
   boolean status=xQueueReceive(receiveQueue, dataBuf, 0);
-  portEXIT_CRITICAL(&receiveLock);
   
   return(status);
 }
@@ -304,7 +305,7 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
     return;
   }
 
-  portENTER_CRITICAL(&receiveLock);       // need to protect code below from potential changes to SpanCasts vector or receiveQueue occuring at same time in another thread
+  std::unique_lock lock(receiveLock);
 
   len-=sizeof(lastMessageID);
 
@@ -333,15 +334,13 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
 
   memcpy((*it)->lastMessageID,incomingData+len,sizeof(lastMessageID));
 
-  if( ((*it)->overwriteQueue && xQueueOverwrite((*it)->receiveQueue, incomingData)) || xQueueSend((*it)->receiveQueue, incomingData, 0) ){       // overwrite or send to queue immediately
+  if( ((*it)->overwriteQueue && xQueueOverwrite((*it)->receiveQueue, incomingData)) || xQueueSend((*it)->receiveQueue, incomingData, 0) )       // overwrite or send to queue immediately
     ESP_LOGI(DIAG_TAG,"Received %d verified bytes from DeviceID=%hu - Queue updated",len,srcAddress->devID);        
-    (*it)->receiveTime=millis();
-    (*it)->active=true;
-  } else {
-    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from DeviceID=%hu but Queue is already full",len,srcAddress->devID);        
-  }
+  else
+    ESP_LOGW(DIAG_TAG,"Received %d verified bytes from DeviceID=%hu but Queue is already full",len,srcAddress->devID);
 
-  portEXIT_CRITICAL(&receiveLock);
+  (*it)->receiveTime=millis();
+  (*it)->active=true;
 }
 
 ///////////////////////////////
@@ -390,12 +389,10 @@ void SpanCast::setChannel(uint8_t channel){
 
 boolean SpanCast::isActive(){
 
-  portENTER_CRITICAL(&receiveLock);
+  std::unique_lock lock(receiveLock);
 
   if(active && (millis()-receiveTime) > spCast.timeout)
     active=false;
-
-  portEXIT_CRITICAL(&receiveLock);
 
   return(active);
 }
@@ -427,7 +424,7 @@ SpanCast::SpConfig_t SpanCast::spConf;
 boolean SpanCast::configured=false;
 SpanCastPrivate::MasterKey *SpanCast::mKey;
 SpanCastPrivate::HMAC *SpanCast::localHMAC;
-portMUX_TYPE SpanCast::receiveLock=portMUX_INITIALIZER_UNLOCKED;
+std::shared_mutex SpanCast::receiveLock;
 
 ///////////////////////////////
 

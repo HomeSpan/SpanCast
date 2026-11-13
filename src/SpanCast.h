@@ -28,6 +28,7 @@
  
 #include "Arduino.h"
 #include <vector>
+#include <shared_mutex>
 #include <initializer_list>
 
 #if defined(ARDUINO_ARCH_ESP8266)
@@ -108,7 +109,7 @@ class SpanCast {
   static SpAddress *deviceAddress;            // SpanCast Address of this device (will be used for AP Mac)
   static SpConfig_t spConf;                   // stores optional global configuration settings
   static boolean configured;                  // flag indicating SpanCast has been configured
-  static portMUX_TYPE receiveLock;            // mutex to lock access to SpanCast objects accessible from dataReceived
+  static std::shared_mutex receiveLock;       // mutex to lock access to SpanCast objects accessible from dataReceived
  
   static void dataReceived(const uint8_t *mac, const uint8_t *incomingData, int len);
   static void setChannel(uint8_t channel);
