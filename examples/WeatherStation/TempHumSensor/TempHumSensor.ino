@@ -46,7 +46,7 @@ void setup() {
   } tempHum;
 
   uint8_t windSpeed=0;
-  char barometerMessage[64]="";
+  char barometerMessage[64];
 
   Serial.printf("\n\nSpanCast Version: %s\n",SpanCast::version());
   Serial.printf("Temperature and Humidity Sensor Ready.\n\n");

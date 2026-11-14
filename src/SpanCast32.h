@@ -35,6 +35,9 @@
 #include <esp_now.h>
 #include <sodium.h>
 
+using shared_mutex = std::shared_mutex;
+#define UNIQUE_LOCK(VAR,MUX) std::unique_lock VAR(MUX)
+
 namespace SpanCastPrivate {
 
 ///////////////////////////////

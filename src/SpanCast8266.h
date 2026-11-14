@@ -34,6 +34,9 @@
 
 #define pdMS_TO_TICKS(N) (N)
 
+using shared_mutex = int;
+#define UNIQUE_LOCK(VAR,MUX) ((void)0)
+
 static const int ESP_NOW_KEY_LEN          = 16;
 static const int crypto_auth_BYTES        = 32;
 static const int ESP_NOW_MAX_DATA_LEN_V2  = 250;
@@ -53,33 +56,33 @@ using esp_now_send_status_t = uint8_t;
 #define esp_random() (RANDOM_REG32)
 
 #if defined(DEBUG_ESP_CORE) || defined(DEBUG_ESP_WIFI) || defined(DEBUG_ESP_HTTP_UPDATE) || defined(DEBUG_ESP_UPDATER) || defined(DEBUG_ESP_OTA)
-  #define ESP_LOGE(TAG,format,...) {Serial.printf("[%6d][E][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+  #define ESP_LOGE(TAG,format,...) Serial.printf("[%6d][E][%s:%d] %s(): [%s] " format "\n",millis(), __FILE__, __LINE__, __FUNCTION__, TAG __VA_OPT__(,) __VA_ARGS__)
 #else
-  #define ESP_LOGE(TAG,format,...) { (void)0; }
+  #define ESP_LOGE(TAG,format,...) ((void)0)
 #endif
 
 #if defined(DEBUG_ESP_WIFI) || defined(DEBUG_ESP_HTTP_UPDATE) || defined(DEBUG_ESP_UPDATER) || defined(DEBUG_ESP_OTA)
-  #define ESP_LOGW(TAG,format,...) {Serial.printf("[%6d][W][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+  #define ESP_LOGW(TAG,format,...) Serial.printf("[%6d][W][%s:%d] %s(): [%s] " format "\n",millis(), __FILE__, __LINE__, __FUNCTION__, TAG __VA_OPT__(,) __VA_ARGS__)
 #else
-  #define ESP_LOGW(TAG,format,...) { (void)0; }
+  #define ESP_LOGW(TAG,format,...) ((void)0)
 #endif
 
 #if defined(DEBUG_ESP_HTTP_UPDATE) || defined(DEBUG_ESP_UPDATER) || defined(DEBUG_ESP_OTA)
-  #define ESP_LOGI(TAG,format,...) {Serial.printf("[%6d][I][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+  #define ESP_LOGI(TAG,format,...) Serial.printf("[%6d][I][%s:%d] %s(): [%s] " format "\n",millis(), __FILE__, __LINE__, __FUNCTION__, TAG __VA_OPT__(,) __VA_ARGS__)
 #else
-  #define ESP_LOGI(TAG,format,...) { (void)0; }
+  #define ESP_LOGI(TAG,format,...) ((void)0)
 #endif
 
 #if defined(DEBUG_ESP_UPDATER) || defined(DEBUG_ESP_OTA)
-  #define ESP_LOGD(TAG,format,...) {Serial.printf("[%6d][D][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+  #define ESP_LOGD(TAG,format,...) Serial.printf("[%6d][D][%s:%d] %s(): [%s] " format "\n",millis(), __FILE__, __LINE__, __FUNCTION__, TAG __VA_OPT__(,) __VA_ARGS__)
 #else
-  #define ESP_LOGD(TAG,format,...) { (void)0; }
+  #define ESP_LOGD(TAG,format,...) ((void)0)
 #endif
 
 #if defined(DEBUG_ESP_OTA)
-  #define ESP_LOGV(TAG,format,...) {Serial.printf("[%6d][V][%s:%d] %s(): [%s] ",millis(),__FILE__,__LINE__,__FUNCTION__,TAG);Serial.printf(format "\n" __VA_OPT__(,) __VA_ARGS__);}
+  #define ESP_LOGV(TAG,format,...) Serial.printf("[%6d][V][%s:%d] %s(): [%s] " format "\n",millis(), __FILE__, __LINE__, __FUNCTION__, TAG __VA_OPT__(,) __VA_ARGS__)
 #else
-  #define ESP_LOGV(TAG,format,...) { (void)0; }
+  #define ESP_LOGV(TAG,format,...) ((void)0)
 #endif
 
 namespace SpanCastPrivate {

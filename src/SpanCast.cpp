@@ -143,6 +143,9 @@ SpanCast::SpanCast(uint16_t deviceID, size_t sendSize, size_t receiveSize, SpCas
   spCast=settings;                        // save settings data
   spCast.encrypt|=spConf.encrypt;         // overlay class-level encryption requirement
 
+  ESP_LOGI(DIAG_TAG,"Initializing new SpanCast object with DeviceID=%hu / SendSize=%d / ReceiveSize=%d / QueueDepth=%d / Encryption=%s.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X",deviceID,sendSize,receiveSize,spCast.queueDepth,
+          spCast.encrypt?"TRUE":"False",destAddress.mac[0],destAddress.mac[1],destAddress.mac[2],destAddress.mac[3],destAddress.mac[4],destAddress.mac[5]);
+
   if(spCast.encrypt || sendSize>0) {      // if encryption is on, or it's not but sending is configured, create a peer
     uint8_t lmk[ESP_NOW_KEY_LEN];
     char *keyContext;
@@ -154,6 +157,7 @@ SpanCast::SpanCast(uint16_t deviceID, size_t sendSize, size_t receiveSize, SpCas
     free(keyContext);
 
     int status;
+    ESP_LOGD(DIAG_TAG,"-> Adding Peer...");
 
     #ifdef ARDUINO_ARCH_ESP32
       peerInfo.channel=0;                             // 0 = matches current WiFi channel
@@ -169,31 +173,22 @@ SpanCast::SpanCast(uint16_t deviceID, size_t sendSize, size_t receiveSize, SpCas
     #endif
 
     if(status!=0){
-      ESP_LOGE(DIAG_TAG,"Can't initialize new SpanCast(%d,%d,%d...) object - failed to create ESP-NOW peer",deviceID,sendSize,receiveSize);
+      ESP_LOGE(DIAG_TAG,"Can't initialize new object - failed to create ESP-NOW peer");
       return;
     }
   }
 
   if(receiveSize>0){
-    ESP_LOGD(DIAG_TAG,"-> Creating Receive Queue");
+    ESP_LOGD(DIAG_TAG,"-> Creating Receive Queue...");
     receiveQueue = xQueueCreate(spCast.queueDepth>0?spCast.queueDepth:1,receiveSize);
     overwriteQueue = (spCast.queueDepth==0);
   }
 
-  initialized=true;
-
-  ESP_LOGI(DIAG_TAG,"Initialized new SpanCast object with DeviceID=%hu / SendSize=%d / ReceiveSize=%d / QueueDepth=%d / Encryption=%s.  MAC=%02X:%02X:%02X:%02X:%02X%:%02X",deviceID,sendSize,receiveSize,spCast.queueDepth,
-          spCast.encrypt?"TRUE":"False",destAddress.mac[0],destAddress.mac[1],destAddress.mac[2],destAddress.mac[3],destAddress.mac[4],destAddress.mac[5]);
-
-  if(esp_now_is_peer_exist(peerInfo.peer_addr))
-    ESP_LOGD(DIAG_TAG,"-> Added Peer");
-
-  if(receiveSize>0)
-    ESP_LOGD(DIAG_TAG,"-> Added Receive Queue");
-
-  ESP_LOGD(DIAG_TAG,"-> Added Vector Entry");
-  std::unique_lock lock(receiveLock);
+  ESP_LOGD(DIAG_TAG,"-> Adding Vector Entry...");
+  UNIQUE_LOCK(lock,receiveLock);
   SpanCasts.push_back(this);
+
+  initialized=true;
 }
 
 ///////////////////////////////
@@ -206,7 +201,7 @@ SpanCast::~SpanCast(){
   if(!initialized)
     return;
 
-  std::unique_lock lock(receiveLock);
+  UNIQUE_LOCK(lock,receiveLock);
 
   auto it=SpanCasts.begin();                          // remove object from SpanCasts vector
   for(;it!=SpanCasts.end() && (*it)!=this;it++);
@@ -283,8 +278,8 @@ boolean SpanCast::get(void *dataBuf){
   if(receiveSize==0)
     return(false);
 
-  boolean status=xQueueReceive(receiveQueue, dataBuf, 0);
-  
+  UNIQUE_LOCK(lock,receiveLock);
+  boolean status=xQueueReceive(receiveQueue, dataBuf, 0); 
   return(status);
 }
 
@@ -305,7 +300,7 @@ void SpanCast::dataReceived(const uint8_t *mac, const uint8_t *incomingData, int
     return;
   }
 
-  std::unique_lock lock(receiveLock);
+  UNIQUE_LOCK(lock,receiveLock);
 
   len-=sizeof(lastMessageID);
 
@@ -389,7 +384,7 @@ void SpanCast::setChannel(uint8_t channel){
 
 boolean SpanCast::isActive(){
 
-  std::unique_lock lock(receiveLock);
+  UNIQUE_LOCK(lock,receiveLock);
 
   if(active && (millis()-receiveTime) > spCast.timeout)
     active=false;
@@ -424,7 +419,7 @@ SpanCast::SpConfig_t SpanCast::spConf;
 boolean SpanCast::configured=false;
 SpanCastPrivate::MasterKey *SpanCast::mKey;
 SpanCastPrivate::HMAC *SpanCast::localHMAC;
-std::shared_mutex SpanCast::receiveLock;
+shared_mutex SpanCast::receiveLock;
 
 ///////////////////////////////
 
