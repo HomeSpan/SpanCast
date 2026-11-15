@@ -93,7 +93,7 @@ void loop() {
 
   // Check if there is any data available from remote sensors.  If yes, print message and then call display() to show all weather data
 
-  if(barometerSensor->get(&weatherData.barometerMessage)){
+  if(barometerSensor->get(weatherData.barometerMessage)){
     Serial.printf("Received from Barometer Sensor: Barometer=%s\n",weatherData.barometerMessage);
     weatherData.barometerMessageActive=true;
     displayData();
