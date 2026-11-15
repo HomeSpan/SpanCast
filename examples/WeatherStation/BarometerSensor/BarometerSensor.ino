@@ -71,7 +71,7 @@ void setup() {
   // Configure SpanCast for this device with the following optional settings:
   //  * Network ID set to 4
   //  * Global enryption disabled
-  //  * Channel Mask to autosync across all channels from 1-11
+  //  * Channel Mask set to autosync across all channels from 1-11
 
   SpanCast::configure(BAROMETER_DEVICE_ID,{.network=4,.encrypt=false,.channelMask=SpanCast::range(1,11)});
 
@@ -85,7 +85,6 @@ void setup() {
   weatherData.barometerMessageActive=true;
 
   Serial.printf("Barometer Sensor Ready.\n");
-
 }
 
 //////////////////////
@@ -123,13 +122,13 @@ void loop() {
 
     // Send update to other sensors
 
-    Serial.printf("Sending Barometer Reading to Wind Speed Sensor...");
+    Serial.printf("Sending Barometer Reading to Wind Speed Sensor... ");
     if(windSpeedSensor->send(weatherData.barometerMessage))
       Serial.printf("Succeeded\n");
     else
       Serial.printf("Failed\n");
 
-    Serial.printf("Sending Barometer Reading to Temp/Hum Sensor...");
+    Serial.printf("Sending Barometer Reading to Temp/Hum Sensor... ");
     if(tempHumSensor->send(weatherData.barometerMessage))
       Serial.printf("Succeeded\n");
     else
@@ -184,6 +183,6 @@ void displayData(){
     Serial.printf("Barometer:    ---\n");
 
   Serial.printf("---------------------------\n\n");
-  }
+}
 
 //////////////////////

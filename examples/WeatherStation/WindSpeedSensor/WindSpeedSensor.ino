@@ -33,6 +33,32 @@
 
 #define UPDATE_FREQUENCY     8000   // how frequently (in millseconds) for this device to send out updates
 
+// Create global pointers for SpanCast objects so they can be created in setup() and used in loop()
+
+SpanCast *barometerSensor;
+SpanCast *tempHumSensor;
+
+// Create a single structure to hold all weather data from this sensor as well as the remote sensors
+// Fill with default starting data but set Active flag to false so data is not yet displayed
+
+struct WeatherData {
+  struct {
+    float temperature=-10;
+    uint8_t humidity=30;
+  } tempHum;
+  boolean tempHumActive=false;
+  
+  uint8_t windSpeed=10;
+  boolean windSpeedActive=false;
+
+  char barometerMessage[64]="Steady";
+  boolean barometerMessageActive=false;
+} weatherData;
+
+// Create global time counter to keep track of when to next send data
+
+uint32_t updateTime=0;
+
 //////////////////////
 
 void setup() {
@@ -40,77 +66,119 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
-  struct {
-    float temperature;
-    uint8_t humidity;
-  } tempHum;
-
-  uint8_t windSpeed=10;
-  char barometerMessage[64];
-
   Serial.printf("\n\nSpanCast Version: %s\n",SpanCast::version());
-  Serial.printf("Wind Speed Sensor Ready.\n\n");
+
+  // Configure SpanCast for this device with the following optional settings:
+  //  * Network ID set to 4
+  //  * Global enryption disabled
+  //  * Channel Mask set to fixed value of channel 5
 
   SpanCast::configure(WIND_SPEED_DEVICE_ID,{.network=4,.encrypt=false,.channelMask=SpanCast::list({5})});
 
-  SpanCast tempHumSensor(TEMP_HUM_DEVICE_ID,sizeof(windSpeed),sizeof(tempHum),{.encrypt=true});
-  SpanCast barometerSensor(BAROMETER_DEVICE_ID,sizeof(windSpeed),sizeof(barometerMessage));
+  // Create SpanCast objects for the remote sensors.  Note encryption has been re-enabled for the Temp/Hum sensor
 
-  uint32_t updateTime=0;
+  tempHumSensor = new SpanCast(TEMP_HUM_DEVICE_ID,sizeof(weatherData.windSpeed),sizeof(weatherData.tempHum),{.encrypt=true});
+  barometerSensor = new SpanCast(BAROMETER_DEVICE_ID,sizeof(weatherData.windSpeed),sizeof(weatherData.barometerMessage));
 
-  while(1){
+  // Set Active flag to true for data from this device
 
-    if(tempHumSensor.get(&tempHum))
-      Serial.printf("Received from Temp/Hum Sensor: Temp=%0.1f, Hum=%d\n",tempHum.temperature,tempHum.humidity);
+  weatherData.windSpeedActive=true;
 
-    if(barometerSensor.get(barometerMessage))
-      Serial.printf("Received from Barometer Sensor: Bar=%s\n",barometerMessage);
-
-    if(millis()-updateTime > UPDATE_FREQUENCY){
-
-      windSpeed++;
-      if(windSpeed>30)
-        windSpeed=10;
-
-      Serial.printf("Sending to Temp/Hum Sensor -> Lastest Wind Speed Reading ... ");
-
-      if(tempHumSensor.send(&windSpeed))
-        Serial.printf("Succeeded\n");
-      else
-        Serial.printf("Failed\n");
-
-      Serial.printf("Sending to Barometer Sensor -> Lastest Wind Speed Reading ... ");
-
-      if(barometerSensor.send(&windSpeed))
-        Serial.printf("Succeeded\n");
-      else
-        Serial.printf("Failed\n");
-
-      Serial.printf("\n---------------------------\n");
-      if(tempHumSensor.isActive()){
-        Serial.printf("Temperature:  %0.1fC\n",tempHum.temperature);
-        Serial.printf("Humidity:     %d%%\n",tempHum.humidity);
-      } else {
-        Serial.printf("Temperature:  ---\n");
-        Serial.printf("Humidity:     ---\n");
-      }
-      Serial.printf("Wind Speed:   %d km/hr\n",windSpeed);
-      if(barometerSensor.isActive())
-        Serial.printf("Barometer:    %s\n",barometerMessage);
-      else
-        Serial.printf("Barometer:    ---\n");
-      Serial.printf("---------------------------\n\n");
-
-      updateTime=millis();        
-    }
-
-    delay(1);
-  }
+  Serial.printf("Wind Speed Sensor Ready.\n\n");
 }
 
 //////////////////////
 
 void loop() {
+
+  // Check if there is any data available from remote sensors.  If yes, print message and then call display() to show all weather data
+
+  if(barometerSensor->get(&weatherData.barometerMessage)){
+    Serial.printf("Received from Barometer Sensor: Barometer=%s\n",weatherData.barometerMessage);
+    weatherData.barometerMessageActive=true;
+    displayData();
+  }
+
+  if(tempHumSensor->get(&weatherData.tempHum)){
+    Serial.printf("Received from Temp/Hum Sensor: Temp=%0.1f, Hum=%d\n",weatherData.tempHum.temperature,weatherData.tempHum.humidity);
+    weatherData.tempHumActive=true;
+    displayData();
+  }
+
+  // If it is time to update sensor reading(s) on this device...
+
+  if(millis()-updateTime > UPDATE_FREQUENCY){
+
+    // Update data on this device and print message
+
+    if(++weatherData.windSpeed>30)
+      weatherData.windSpeed=10;
+
+    Serial.printf("New Wind Speed Reading: %d\n",weatherData.windSpeed);
+
+    // Send update to other sensors
+
+    Serial.printf("Sending Wind Speed Reading to Temp/Hum Sensor... ");
+    if(tempHumSensor->send(&weatherData.windSpeed))
+      Serial.printf("Succeeded\n");
+    else
+      Serial.printf("Failed\n");
+
+    Serial.printf("Sending Wind Speed Reading to Barometer Sensor... ");
+    if(barometerSensor->send(&weatherData.windSpeed))
+      Serial.printf("Succeeded\n");
+    else
+      Serial.printf("Failed\n");
+
+    // Display updated weather data
+  
+    displayData();
+
+    // Update timer
+
+    updateTime=millis();        
+  }
+
+  // Check to see if a remote sensor has been flagged as Active, but new data from that sensor has not been received in a while.  If so, flag as Inactive
+
+  if(weatherData.barometerMessageActive && !barometerSensor->isActive()){
+    Serial.printf("Have not received data from Barometer Sensor in quite a while!\n");
+    weatherData.barometerMessageActive=false;
+  }
+
+  if(weatherData.tempHumActive && !tempHumSensor->isActive()){
+    Serial.printf("Have not received data from Temp/Hum Sensor in quite a while!\n");
+    weatherData.tempHumActive=false;
+  }
+}
+
+//////////////////////
+
+void displayData(){
+
+  // Display all weather data except replace values with "--" for sensors flagged as Inactive
+
+  Serial.printf("\n---------------------------\n");
+
+  if(weatherData.tempHumActive){
+    Serial.printf("Temperature:  %0.1fC\n",weatherData.tempHum.temperature);
+    Serial.printf("Humidity:     %d%%\n",weatherData.tempHum.humidity);
+  } else {
+    Serial.printf("Temperature:  ---\n");
+    Serial.printf("Humidity:     ---\n");
+  }
+
+  if(weatherData.windSpeedActive)
+    Serial.printf("Wind Speed:   %d km/hr\n",weatherData.windSpeed);
+  else
+    Serial.printf("Wind Speed:   ---\n");
+
+  if(weatherData.barometerMessageActive)
+    Serial.printf("Barometer:    %s\n",weatherData.barometerMessage);
+  else
+    Serial.printf("Barometer:    ---\n");
+
+  Serial.printf("---------------------------\n\n");
 }
 
 //////////////////////
