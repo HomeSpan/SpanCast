@@ -236,6 +236,18 @@ boolean SpanCast::send(const void *data){
     ESP_LOGE(DIAG_TAG,"Can't send to DeviceID=%hhu - SpanCast object not configured for sending",destAddress->devID);
     return(false);
   }
+
+  #ifdef ARDUINO_ARCH_ESP32
+    if(!(WiFi.getMode() & WIFI_AP)){
+      ESP_LOGE(DIAG_TAG,"Can't send to DeviceID=%hhu - WiFi mode must be set to WIFI_AP or WIFI_AP_STA!",destAddress->devID);
+    return(false);
+    }
+  #else
+    if(WiFi.getMode()!=WIFI_STA){
+      ESP_LOGE(DIAG_TAG,"Can't send to DeviceID=%hhu - WiFi mode must be set to WIFI_STA!",destAddress->devID);
+    return(false);
+    }
+  #endif  
   
   uint8_t channel=WiFi.channel();           // get current WiFi channel
   if(!allowedChannel(channel))              // if channel is NOT allowed by channel mask, set channel to first allowed
