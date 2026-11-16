@@ -270,9 +270,17 @@ Note that upon start-up `isActive()` will return `false` for any given link unti
 
 # SpanCast Errors, Warnings, and Diagnostic Messages
 
-SpanCast uses the ESP32's standard Log Library to provide 4 levels of diagnostic messages: **Errors**, **Warnings**, **Info**, and **Debug**.  You can select the level of logging via the *Core Debug Level* option under the *Tools* menu of the Arduino IDE.  Select **Errors** or **Warnings** for minimal, but important, output.  Select **Info** if you'd like to see the inner workings of internal SpanCast processes, such as WiFi synchronization.  The **Debug** level provides even more details that are useful for debugging the library itself.  Note you must recompile your sketch after selecting a new logging level for it to take effect.  
+SpanCast uses the ESP32's standard Log Library to provide 4 levels of diagnostic messages: **Errors**, **Warnings**, **Info**, and **Debug**.  You can select the level of logging under the *Tools → Core Debug Level* menu of the Arduino IDE.  Select **Errors** or **Warnings** for minimal, but important, output.  Select **Info** if you'd like to see the inner workings of internal SpanCast processes, such as WiFi synchronization.  The **Debug** level provides even more details that are useful for debugging the library itself.  Note you must recompile your sketch after selecting a new logging level for it to take effect.  
 
-Since the legacy ESP8266 does not include a Log Library, SpanCast simply writes all log messages, regardless of level, directly to the Serial Monitor if you select the **WIFI** option (or any option that includes **WIFI**) as the *Debug Level* under the *Tools* menu of the Arduino IDE.  Note that in contrast to the Log Library used by SpanCast on the ESP32, on the ESP8266 you must initialize the Serial Monitor in your sketch (e.g. `Serial.begin()`) to see these log messages.
+Since the legacy ESP8266 does not include a Log Library, SpanCast prints its log messages to the Serial Monitor using `Serial.printf()`.  To see those messages you must therefore include a call to `Serial.begin()` near the top of your sketch.  Also, the Arduino IDE does not provide log "levels" but instead allows users to select various combination of functions, such as WIFI or OTA, for logging.  To emulate the ESP32 Log Library, SpanCast maps the following ESP8266 log functions (selectable under the *Tools → Debug Level* menu of the Arduino IDE when compiling for an ESP8266) to ESP32 log levels as follows:
+
+|ESP8266 Level|ESP32 Log Level|
+|---|---|
+|CORE|Errors|
+|WIFI|Warnings|
+|HTTP_UPDATE|Info
+|UPDATE|Debug
+|OTA|Verbose (unused by SpanCast)
 
 # Maximum Number of SpanCast Links
 
