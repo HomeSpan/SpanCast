@@ -293,7 +293,31 @@ There is no limit to the number of **unencrypted**, **receive-only** SpanCast li
 
 # Example Sketches
 
-In addition to the Basic Transmitter/Receiver Example sketches shown above, SpanCast includes a more detailed "WeatherStation" example that demonstrates bi-direction communication among 3 different devices.  These sketches can be found under the *File → Examples* menu of the Arduino IDE.  In addition, a detailed example showing how SpanCast can be used to create a remote temperature sensor that interacts directly with HomeKit is provided as part of the [HomeSpan](https://github.com/HomeSpan/HomeSpan) Library.
+The Basic Transmitter/Receiver example sketches shown above can be found under the *File → Examples → SpanCast → Basic* menu of the Arduino IDE.  In addition, SpanCast includes a more detailed "WeatherStation" example that demonstrates bi-direction communication among 3 different devices: a Wind Speed Sensor, a Temperature/Humidity Sensor, and a Barometric Pressure Sensor.  Note the sketches only include simulated data as they are designed to illustrate how to use the different optional settings of SpanCast, not to actually measure weather factors.  The framework has been configured as follows:
+
+* the Temp/Hum device, the Wind Speed device, and the Barometer device, have been assigned Device IDs of 1, 2, and 3, respectively
+
+* the Network ID has been set to 4 for each device.  This ensures  no interference with the Basic Receiver example above that also has a Device ID of 3, but retains the default Network ID of 1.
+
+* the WiFi channel for the Wind Speed device has been set to a fixed value of 5
+
+* the *channelMask* for both the Temp/Hum device and Barometer device have been set to autosynchronize allowing any channel from 1 to 11.  When these devices send data to the Wind Speed device for the first time, they will automatically synchronize to WiFi channel 5 and use that channel for all future transmissions, even if the power is cycled.[^channel5]  However, if a transmission fails, perhaps because you power off the Wind Speed device, the autosynchonization on these devices will try every channel from 1 to 11 again
+
+* Encryption remains globally enabled on the Temp/Hum device (which is the default), but has been globally disabled on the Wind Sensor and Barometer device.  However, for those devices to read the encrypted transmissions received from the Temp/Hum device, encryption is re-enabled on the specific links to the Temp/Hum device.[^disable]
+
+* each device continuously checks to see if there is new data received from any of the other devices and if so, it displays an updated view of all the weather data
+
+* the Temp/Hum device, the Wind Speed device, and the Barometer device, each update their simulated data every 5, 8, and 13 seconds.  After each update the data is transmitted to the other device and an updated view of all weather data is displayed on the Serial Monitor.
+
+* each device continuously checks to see if there is new data received from any of the other devices and if so, it displays an updated view of all the weather data on the Serial Monitor
+
+* each device tracks whether it has been more than 60 seconds (the default) since data was received from the other devices.  If not, it prints a warning message to the Serial Monitor and displays that data as "--" instead of an outdated value.
+
+[^channel5]: Note if your devices are in very close proximity it may be possible for transmissions to succeed even if the WiFi channels on the devices differ by one or two.  In such cases the Temp/Hum device and Barometer device may autosynchronize to channel 4 (and maybe even channel 3) if the transmissions using those channels are sufficiently reliable.  However, if this occurs and you start to increase the distance between your devices, you should see the autosynchonization update to WiFi channel 5 across all the devices as SpanCast finds transmissions on channel 4 (or channel 3) begin to fail.
+
+[^disable]: Note what happens if you alter the sketch and do not re-enable enryption on one of those links, say from the Wind Speed device to Temp/Hum device: the un-encrypted transmissions sent from the Wind Speed device to the Temp/Hum device will still be properly read by the Temp/Hum device, but the encrypted transmissions sent from the Temp/Hum device to the Wind Speed device will be ignored since the Wind Speed sensor will not be able to read the encrypted transmission with encryption disabled.
+
+These sketches can be found under the *File → Examples → SpanCast → WeatherStation* menu of the Arduino IDE.  In addition, a detailed example showing how SpanCast can be used to create a remote temperature sensor that interacts directly with HomeKit is provided as part of the [HomeSpan](https://github.com/HomeSpan/HomeSpan) Library.
 
 # The Complete SpanCast API 
 
