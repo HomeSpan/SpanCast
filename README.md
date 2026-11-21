@@ -333,7 +333,41 @@ SpanCast utilizes Espressif's ESP-NOW protocol for transmitting and receiving da
 
 * Using a broadcast MAC address to avoid hardcoding individual MAC addresses into a sketch means giving up ESP-NOW encryption and, even more importantly, the ability to easily verify whether transmissions were sucessfully received by their intended recipients.  SpanCast uses this ability to automatically synchronize WiFi channels across all of your devices, thereby ensuring your SpanCast data transmissions are successfully received.
 
-To solve these issues, SpanCast abstracts away the MAC addresses and instead uses the concept of a simple, user-definable SpanCast *Device ID* that you create in each sketch.  SpanCast requires that every device on your SpanCast network is assigned a unique *Device ID*, in the range of 0 through 255.  As described below, within each sketch you can easily direct data transmissions to, and receive data from, other devices based on their resepctive SpanCast *Device IDs*, without needing to know anything about any device's MAC address.  And if a device in your network needs to be replaced, you can simply upload the same sketch to your replacement device without changing any SpanCast identifiers in any sketch, whether on the new device or any other device in your network.
+To solve these issues, SpanCast abstracts away the MAC addresses and instead uses the concept of a simple, user-definable SpanCast *Device ID* (and optional *Network ID*) that you create in each sketch as fully described in above.  Under the hood, SpanCast resets the MAC address for the device during the call to `configure()` based on the specified *Device ID* and *Network ID* as follows:
+
+* byte 0 of the MAC address is always set to F2, consistent with a MAC address that is *unicast* (least-signifcant bit is set zero) and *locally administered* (second-to-last bit is set to one)
+
+* byte 1 is set to the specified 8-bit *Network ID*
+
+* bytes 2 and 3 are set to the specified 16-bit *Device ID* (stored in little-endian order)
+
+* byte 4 is set as the XOR of bytes 0 and 2
+
+* byte 5 is set as the XOR of bytes 1 and 3
+
+For example, SpanCast will set the MAC address of a device with *Device ID=1* and *Network ID=4* (i.e. the Temp/Hum example above) to F2:04:01:00:F3:04.  SpanCast will displays this value in the Serial Monitor during the call to `configure()` if the log level is set to "Info" or greater.
+
+#### STA vs AP Interfaces
+
+The WiFi stacks on both the ESP32 and ESP8266 each support an STA interface (used to connect the device to a central WiFi network) and an AP interface (used to configure the device as an Access Point). On the ESP32, SpanCast utilizes the AP interface and therefore changes the MAC address only for that interfacing, leaving the MAC address for the STA interface untouched.  This is desireable since many WiFi routers can be configured to recognize the MAC addresses of the devices that are connected (or trying to connect) and may display a custom name for that device or may even determine whether to allow the device to join the network.  By utilizing the AP interface, SpanCast can freely change the MAC address of the interface without impacting the STA MAC address or how it may be used for recognition and permissioning by the central router to which the device is connected.
+
+However, on the ESP8266 SpanCast must use the STA interface as there are instabilities in changing the MAC address of the AP interface.  Since the ESP8266 is a legacy device, there is no expectation that this will ever be resolved.  This does not mean you cannot use SpanCast on an ESP8266 that is also connected to a central WiFi network.  But is does mean that the connection may not operate as expected if your central router has been configured to expect a specific MAC address for the device to connect.
+
+Note that SpanCast's use of the AP interface on the ESP32 versus its use of the STA interface on the ESP8266 does not impede the ability of SpanCast to transmit data between ESP32 nd ESP8266 devices. The transmissions themselves do not encode which interface was used by the sender.
+
+> [!IMPORTANT]
+> When `SpanCast::configure()` is called in your sketch, SpanCast enables the AP interface, but does not touch the STA interface.  If it is already enabled, it will remain enabled.  If it is disabled, it will remain disabled.  The `WIFI.begin()` functionality commonly used to connect a device to a central WiFi network acts similarly except that it enables the STA interface and does not touch the AP interface.  As such, you may call `configure()` to start SpanCast either before or after connecting to a central network using `WIFI.begin()` or any other WiFi connection library that enables the STA interface without touching the AP interface.
+>
+> However, if you use a library that sets the WiFi mode of the device to WIFI_STA (i.e. STA only) when trying to connect to a central network, or you call `WIFI.mode(WIFI_STA)` directly in your sketch, this will disable the AP interface.  In such cases the solution is to call `SpanCast::configure()` *after* you connect to the central network so SpanCast can properly enable the AP interface.
+>
+>If in your sketch you do call `SpanCast::configure()` *before* connecting to a central WiFi network using a library that *turns off the AP interface*, you can always re-enable it by calling `WIFI.enableAP(true)` *after* the connection library is called.  Setting the log level to "Warning" or greater wheh you compile your sketch will provide diagnostic messages to aid in debugging such situations.
+
+
+
+
+
+
+
 
 
 
