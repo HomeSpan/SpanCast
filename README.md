@@ -17,7 +17,7 @@ Key features of SpanCast include:
 * **Fully-Managed Transmissions**
   * built-in data queues with user-specified depth
   * allows use of native ESP-NOW message encryption
-  * enhances security by further authenticating messages even when not encrypyted
+  * enhances security by further authenticating messages even when not encrypted
   * provides anti-duplication logic so that re-transmissions of unacknowledged messages do not re-trigger multiple alerts
 * **Full Support for legacy ESP8266 devices when run under the [Arduino-ESP8266 Core](https://github.com/esp8266/arduino)**
 
@@ -38,11 +38,11 @@ Before you can create SpanCast objects you need to first configure SpanCast and 
 
 ## Step 2: Create one or more SpanCast Objects
 
-Once SpanCast is configured, you can then create SpanCast objects. Each SpanCast object represents a bi-directional communication link betweeen your device and another device. To create a SpanCast object ("link"), use the constructor `SpanCast(deviceID, sendSize, receiveSize)`, where *deviceID* is the *Device ID* of the device **at the other end of the link**, *sendSize* is the size (in bytes) of any messsages you intend to transmit to that device, and *receiveSize* is the size (in bytes) of any messsages you expect to receive from that device.
+Once SpanCast is configured, you can then create SpanCast objects. Each SpanCast object represents a bi-directional communication link between your device and another device. To create a SpanCast object ("link"), use the constructor `SpanCast(deviceID, sendSize, receiveSize)`, where *deviceID* is the *Device ID* of the device **at the other end of the link**, *sendSize* is the size (in bytes) of any messages you intend to transmit to that device, and *receiveSize* is the size (in bytes) of any messages you expect to receive from that device.
 
-As a result of message size limitations in ESP-NOW protcol, the maximum allowed value for *sendSize* and *receiveSize* is 1434 bytes on ESP32 devices and 214 bytes on ESP8266 devices.[^maxSize]  For messages transmitted between an ESP32 and ESP8266, the lower maximum of 214 prevails.
+As a result of message size limitations in ESP-NOW protocol, the maximum allowed value for *sendSize* and *receiveSize* is 1434 bytes on ESP32 devices and 214 bytes on ESP8266 devices.[^maxSize]  For messages transmitted between an ESP32 and ESP8266, the lower maximum of 214 prevails.
 
-Note you may set *sendSize* to zero if messsages are not intended to be transmitted to other devices using this link.  Similarly you may set *receiveSize* to zero if messages are not intended to be received from other devices using this link.  However, you can not set both *sendSize* and *receiveSize* to zero for the same link since there would be no point to creating such an object.
+Note you may set *sendSize* to zero if messages are not intended to be transmitted to other devices using this link.  Similarly you may set *receiveSize* to zero if messages are not intended to be received from other devices using this link.  However, you can not set both *sendSize* and *receiveSize* to zero for the same link since there would be no point to creating such an object.
 
 [^maxSize]: The ESP-NOW v2 protocol used by the ESP32 limits the size of a message transmission to 1470 bytes of application data.  The ESP-NOW v1 protocol used by the ESP8266 limits this size to 250 bytes.  Since SpanCast needs to reserve 36 bytes of each message for a 32-byte HMAC signature and 4-byte nonce, this leaves a maximum of 1434 bytes per message on the ESP32, and 214 bytes per message on the ESP8266, for user data.
 
@@ -147,7 +147,7 @@ SpanCast::configure(3, { .password="MyPassword", .numTries=2 } );
 SpanCast remoteDevice(5, sizeof(int), 0, { .queueDepth=2 } );
 ```
 
-Remember that in C++, designated initializers *must* be specified in the same order as they appear in the structure definition.  Skipping settings is fine (the defaults above will be applied), but specifying them out of order (i.e. first *.numTries* followed by *.passsword*) will result in a compilation error.
+Remember that in C++, designated initializers *must* be specified in the same order as they appear in the structure definition.  Skipping settings is fine (the defaults above will be applied), but specifying them out of order (i.e. first *.numTries* followed by *.password*) will result in a compilation error.
 
 ## Optional Settings for *SpanCast::configure()*
 
@@ -157,9 +157,9 @@ The sections below fully describe the global settings structure, *SpConfig_t*, t
 
 Changing the *Network ID* of a device from its default value of 1 to any other 8-bit number by setting the *network* parameter allows you to create logically distinct SpanCast networks.  SpanCast *Device IDs* must be unique across all devices with the same *Network ID*, but they do not need to be unique across devices with different *Network IDs*.
 
-For example, if you have one set of 5 devices serving as temperature sensors and another set of 5 devices serving as remote pushbuttons, as long as the two sets of devices **do not** need to communicate with eachother via SpanCast, you can change the *Network ID* of one set of devices to 2 (or any other number), and then both sets of devices can use the same *Device IDs* from 1-5 without concern about overlapping.
+For example, if you have one set of 5 devices serving as temperature sensors and another set of 5 devices serving as remote pushbuttons, as long as the two sets of devices **do not** need to communicate with each other via SpanCast, you can change the *Network ID* of one set of devices to 2 (or any other number), and then both sets of devices can use the same *Device IDs* from 1-5 without concern about overlapping.
 
-Note that changing the *network* setting using `configure()` impacts the device's *Network ID* as well as all SpanCast objects constructued in your sketch.  When you call `send()` on a SpanCast object it uses both the *Device ID* associated with that specific object as well as the *Network ID* assigned in the sketch to direct transmissions and receive incoming messages. It is not possible to transmit or receive messages from devices with separate Network IDs regardless of their *Device IDs*.
+Note that changing the *network* setting using `configure()` impacts the device's *Network ID* as well as all SpanCast objects constructed in your sketch.  When you call `send()` on a SpanCast object it uses both the *Device ID* associated with that specific object as well as the *Network ID* assigned in the sketch to direct transmissions and receive incoming messages. It is not possible to transmit or receive messages from devices with separate Network IDs regardless of their *Device IDs*.
 
 ### SpanCast Encryption (the *password* and *encrypt* settings)
 
@@ -175,7 +175,7 @@ If the message it receives is labeled as encrypted, ESP-NOW tries to decrypt the
 
 If instead the message it receives is labeled as unencrypted, ESP-NOW automatically passes the message to SpanCast for further processing regardless of whether encryption has been enabled on the receiving device or there is even a SpanCast link object created to receive the message.  SpanCast handles each of these situation (and more) gracefully and reports any such issues as part of its extensive diagnostics.
 
-However, because ESP-NOW does not indicate to SpanCast whether the message it is passing was originally unencrypted, or was originally encrypyted but has been successfully decrypted, SpanCast has no way of knowing whether an unencrypted message was received on a SpanCast link that was configured for encryption. To address this potential security loop-hole, SpanCast adds a separate message authentication layer to every message transmitted.  Whenever SpanCast receives a message, it checks to authentication data embedded in the message and if authentication fails, it reports a diagnostic warning and drops the message from further processing.  This means that the `get()` function will only return messages that have been authenticated by SpanCast regardless of whether encryption is enabled or disabled.  Also, and perhaps most importantly, 
+However, because ESP-NOW does not indicate to SpanCast whether the message it is passing was originally unencrypted, or was originally encrypted but has been successfully decrypted, SpanCast has no way of knowing whether an unencrypted message was received on a SpanCast link that was configured for encryption. To address this potential security loop-hole, SpanCast adds a separate message authentication layer to every message transmitted.  Whenever SpanCast receives a message, it checks to authentication data embedded in the message and if authentication fails, it reports a diagnostic warning and drops the message from further processing.  This means that the `get()` function will only return messages that have been authenticated by SpanCast regardless of whether encryption is enabled or disabled.  Also, and perhaps most importantly, 
 
 > [!IMPORTANT]
 > The keys SpanCast uses for message authentication is derived from the *password* setting used in the call to `configure()` so even if you disable encryption, transmissions will only be successful between devices if the *password* settings match.
@@ -192,13 +192,13 @@ However, SpanCast also includes an ability to dynamically changes the channel of
 
 Invoking this option is done during the call to `configure()` by setting the optional *channelMask* parameter to a non-zero value.  The *channelMask* parameter is a 16-bit mask that allows you to specify which channels SpanCast should utilize when transmitting SpanCast messages.  For each bit N in *channelMask*, where N ranges from 1 to 14, if the bit is **set** SpanCast will attempt transmissions using WiFi channel N.  If bit N is **not set** SpanCast will not use that channel.  For example, setting the *channelMask* to 64 (0x0040) tells SpanCast to use only WiFi channel 6.  Setting the *channelMask* instead to 4094 (0x0FFE) tells SpanCast to use any channel from 1-11. Note that since there are no WiFi Channels 0 or 15, bit 0 and bit 15 of *channelMask* do not matter and are typically left as zero.
 
-WiFi channel auto-synchronization applies whenever you transmit a messsge using `send()`.  SpanCast first tries to transmit the message using whatever WiFi channel is currently set.  If the transmission is successful `send()` exits and returns `true`.  If the transmission instead fails, SpanCast tries again using the same channel.  SpanCast will continue re-transmitting the message until either it succeeds or the number of tries equals the *numTries* parameter, which defaults to 3, but can be set to any value greater than zero[^numTries] during the call to `configure()`.
+WiFi channel auto-synchronization applies whenever you transmit a message using `send()`.  SpanCast first tries to transmit the message using whatever WiFi channel is currently set.  If the transmission is successful `send()` exits and returns `true`.  If the transmission instead fails, SpanCast tries again using the same channel.  SpanCast will continue re-transmitting the message until either it succeeds or the number of tries equals the *numTries* parameter, which defaults to 3, but can be set to any value greater than zero[^numTries] during the call to `configure()`.
 
 [^numTries]: If you set *numTries* to zero, SpanCast will reset it to 1 during the call to `configure()`
 
 If SpanCast still fails to transmit successfully after *numTries* attempts, it changes the WiFi radio to next allowed channel based on the *channelMask* parameter, and repeats the above process.  In this fashion SpanCast will loop through WiFi channels allowed by *channelMask* and attempt to transmit until either it succeeds or it has tried every WiFi channel allowed at least once.  For example, if the *channelMask* is set to allow only channels {1,3,5,6,9} and the WiFi channel happens to be set to 5 when `send()` is called, SpanCast will first try channel 5, followed by 6, 9, 1, and finally 3.  If at any point the transmission succeeds, `send()` saves the current channel in long-term NVS memory, exits, and returns `true`.  This ensures that `send()` always uses the most recent successful channel when it is next called, even if power is cycled.[^channelStartup]  Unless the receiving device changes the channel it is using, `send()` will generally not have to probe different channels on subsequent calls.
 
-[^channelStartup]: Provided that *channelMask* is non-zero, SpanCast will read the last-used WiFi channel stored in long-term NVS memory during the call to `configure()` and set the WiFi channel to that value with one exception: if the current *channelMask* does not allow that channel to be used, SpanCast wll instead st the WiFi channel to the lowest channel number allowed by *channelMask*.  This may occur, for example, if you change your sketch to reduce the the numnber of channels allowed by *channelMask* such that a previously-used channel that is stored in NVS is no longer allowed.
+[^channelStartup]: Provided that *channelMask* is non-zero, SpanCast will read the last-used WiFi channel stored in long-term NVS memory during the call to `configure()` and set the WiFi channel to that value with one exception: if the current *channelMask* does not allow that channel to be used, SpanCast wll instead st the WiFi channel to the lowest channel number allowed by *channelMask*.  This may occur, for example, if you change your sketch to reduce the the number of channels allowed by *channelMask* such that a previously-used channel that is stored in NVS is no longer allowed.
 
 However, if after trying channel 3 (the last channel allowed by *channelMask* in this example) the transmission is still unsuccessful, SpanCast will reset the channel back to 5 (where it started), terminate `send()` and return `false`.
 
@@ -264,7 +264,7 @@ For each link, SpanCast retains the time of the most recent message received to 
 
 The active/inactive state determined by SpanCast can be read by calling the `isActive()` method for any SpanCast object.  This function returns `true` if the last message received for that link has been within *timeout* milliseconds, else the function returns `false`.
 
-The *timeout* setting defaults to 60,000 (i.e. 60 seconds) if left unspecified when constructing a SpanCast link.  Use of `isActive()` is completely optional, though if you decide to use it in your sketch to estimate whether a remote device may have gone off-line or is out of range, you should set *timeout* to be **longer** than the period that the remote device is expected to send messages.  For example, if you have a remote sensor that is programmed to send temperature readings every 30 seconds, setting *timeout* to 90,000 for the link that is receiving those messages means that the call to `isActive()` will return `true` even if an occassional message is dropped, but will return `false` after an extended time of not receiving any messages from the remote device has passed.
+The *timeout* setting defaults to 60,000 (i.e. 60 seconds) if left unspecified when constructing a SpanCast link.  Use of `isActive()` is completely optional, though if you decide to use it in your sketch to estimate whether a remote device may have gone off-line or is out of range, you should set *timeout* to be **longer** than the period that the remote device is expected to send messages.  For example, if you have a remote sensor that is programmed to send temperature readings every 30 seconds, setting *timeout* to 90,000 for the link that is receiving those messages means that the call to `isActive()` will return `true` even if an occasional message is dropped, but will return `false` after an extended time of not receiving any messages from the remote device has passed.
 
 Note that upon start-up `isActive()` will return `false` for any given link until that link has received its first message.  Also note that `isActive()` only pertains to messages received, not messages transmitted, and thus will always return `false` for a SpanCast link configured as transmit-only (i.e. *receiveSize=0*).
 
@@ -301,7 +301,7 @@ The Basic Transmitter/Receiver example sketches shown above can be found under t
 
 * the WiFi channel for the Wind Speed device has been set to a fixed value of 5
 
-* the *channelMask* for both the Temp/Hum device and Barometer device have been set to autosynchronize allowing any channel from 1 to 11.  When these devices send data to the Wind Speed device for the first time, they will automatically synchronize to WiFi channel 5 and use that channel for all future transmissions, even if the power is cycled.[^channel5]  However, if a transmission fails, perhaps because you power off the Wind Speed device, the autosynchonization on these devices will try every channel from 1 to 11 again
+* the *channelMask* for both the Temp/Hum device and Barometer device have been set to autosynchronize allowing any channel from 1 to 11.  When these devices send data to the Wind Speed device for the first time, they will automatically synchronize to WiFi channel 5 and use that channel for all future transmissions, even if the power is cycled.[^channel5]  However, if a transmission fails, perhaps because you power off the Wind Speed device, the autosynchronization on these devices will try every channel from 1 to 11 again
 
 * Encryption remains globally enabled on the Temp/Hum device (which is the default), but has been globally disabled on the Wind Sensor and Barometer device.  However, for those devices to read the encrypted transmissions received from the Temp/Hum device, encryption is re-enabled on the specific links to the Temp/Hum device.[^disable]
 
@@ -313,15 +313,15 @@ The Basic Transmitter/Receiver example sketches shown above can be found under t
 
 * each device tracks whether it has been more than 60 seconds (the default) since data was received from the other devices.  If not, it prints a warning message to the Serial Monitor and displays that data as "--" instead of an outdated value.
 
-[^channel5]: Note if your devices are in very close proximity it may be possible for transmissions to succeed even if the WiFi channels on the devices differ by one or two.  In such cases the Temp/Hum device and Barometer device may autosynchronize to channel 4 (and maybe even channel 3) if the transmissions using those channels are sufficiently reliable.  However, if this occurs and you start to increase the distance between your devices, you should see the autosynchonization update to WiFi channel 5 across all the devices as SpanCast finds transmissions on channel 4 (or channel 3) begin to fail.
+[^channel5]: Note if your devices are in very close proximity it may be possible for transmissions to succeed even if the WiFi channels on the devices differ by one or two.  In such cases the Temp/Hum device and Barometer device may autosynchronize to channel 4 (and maybe even channel 3) if the transmissions using those channels are sufficiently reliable.  However, if this occurs and you start to increase the distance between your devices, you should see the autosynchronization update to WiFi channel 5 across all the devices as SpanCast finds transmissions on channel 4 (or channel 3) begin to fail.
 
-[^disable]: Note what happens if you alter the sketch and do not re-enable enryption on one of those links, say from the Wind Speed device to Temp/Hum device: the un-encrypted transmissions sent from the Wind Speed device to the Temp/Hum device will still be properly read by the Temp/Hum device, but the encrypted transmissions sent from the Temp/Hum device to the Wind Speed device will be ignored since the Wind Speed sensor will not be able to read the encrypted transmission with encryption disabled.
+[^disable]: Note what happens if you alter the sketch and do not re-enable encryption on one of those links, say from the Wind Speed device to Temp/Hum device: the un-encrypted transmissions sent from the Wind Speed device to the Temp/Hum device will still be properly read by the Temp/Hum device, but the encrypted transmissions sent from the Temp/Hum device to the Wind Speed device will be ignored since the Wind Speed sensor will not be able to read the encrypted transmission with encryption disabled.
 
 These sketches can be found under the *File → Examples → SpanCast → WeatherStation* menu of the Arduino IDE.  In addition, a detailed example showing how SpanCast can be used to create a remote temperature sensor that interacts directly with HomeKit is provided as part of the [HomeSpan](https://github.com/HomeSpan/HomeSpan) Library.
 
 # The Complete SpanCast API 
 
-
+[TBD]
 
 ## Technical Details (for those interested)
 
@@ -331,11 +331,11 @@ SpanCast utilizes Espressif's ESP-NOW protocol for transmitting and receiving da
 
 * Hardcoding MAC addresses into a sketch makes that sketch non-portable.  If you replace one device on your network you need to update the sketches on every other device that either transmits data to, or receives data from that new device, with that new device's specific MAC address.
 
-* Using a broadcast MAC address to avoid hardcoding individual MAC addresses into a sketch means giving up ESP-NOW encryption and, even more importantly, the ability to easily verify whether transmissions were sucessfully received by their intended recipients.  SpanCast uses this ability to automatically synchronize WiFi channels across all of your devices, thereby ensuring your SpanCast data transmissions are successfully received.
+* Using a broadcast MAC address to avoid hardcoding individual MAC addresses into a sketch means giving up ESP-NOW encryption and, even more importantly, the ability to easily verify whether transmissions were successfully received by their intended recipients.  SpanCast uses this ability to automatically synchronize WiFi channels across all of your devices, thereby ensuring your SpanCast data transmissions are successfully received.
 
 To solve these issues, SpanCast abstracts away the MAC addresses and instead uses the concept of a simple, user-definable SpanCast *Device ID* (and optional *Network ID*) that you create in each sketch as fully described in above.  Under the hood, SpanCast resets the MAC address for the device during the call to `configure()` based on the specified *Device ID* and *Network ID* as follows:
 
-* byte 0 of the MAC address is always set to F2, consistent with a MAC address that is *unicast* (least-signifcant bit is set zero) and *locally administered* (second-to-last bit is set to one)
+* byte 0 of the MAC address is always set to F2, consistent with a MAC address that is *unicast* (least-significant bit is set zero) and *locally administered* (second-to-last bit is set to one)
 
 * byte 1 is set to the specified 8-bit *Network ID*
 
@@ -349,7 +349,7 @@ For example, SpanCast will set the MAC address of a device with *Device ID=1* an
 
 #### STA vs AP Interfaces
 
-The WiFi stacks on both the ESP32 and ESP8266 each support an STA interface (used to connect the device to a central WiFi network) and an AP interface (used to configure the device as an Access Point). On the ESP32, SpanCast utilizes the AP interface and therefore changes the MAC address only for that interfacing, leaving the MAC address for the STA interface untouched.  This is desireable since many WiFi routers can be configured to recognize the MAC addresses of the devices that are connected (or trying to connect) and may display a custom name for that device or may even determine whether to allow the device to join the network.  By utilizing the AP interface, SpanCast can freely change the MAC address of the interface without impacting the STA MAC address or how it may be used for recognition and permissioning by the central router to which the device is connected.
+The WiFi stacks on both the ESP32 and ESP8266 each support an STA interface (used to connect the device to a central WiFi network) and an AP interface (used to configure the device as an Access Point). On the ESP32, SpanCast utilizes the AP interface and therefore changes the MAC address only for that interfacing, leaving the MAC address for the STA interface untouched.  This is desirable since many WiFi routers can be configured to recognize the MAC addresses of the devices that are connected (or trying to connect) and may display a custom name for that device or may even determine whether to allow the device to join the network.  By utilizing the AP interface, SpanCast can freely change the MAC address of the interface without impacting the STA MAC address or how it may be used for recognition and permissioning by the central router to which the device is connected.
 
 However, on the ESP8266 SpanCast must use the STA interface as there are instabilities in changing the MAC address of the AP interface.  Since the ESP8266 is a legacy device, there is no expectation that this will ever be resolved.  This does not mean you cannot use SpanCast on an ESP8266 that is also connected to a central WiFi network.  But is does mean that the connection may not operate as expected if your central router has been configured to expect a specific MAC address for the device to connect.
 
@@ -360,7 +360,7 @@ Note that SpanCast's use of the AP interface on the ESP32 versus its use of the 
 >
 > However, if you use a library that sets the WiFi mode of the device to WIFI_STA (i.e. STA only) when trying to connect to a central network, or you call `WIFI.mode(WIFI_STA)` directly in your sketch, this will disable the AP interface.  In such cases the solution is to call `SpanCast::configure()` *after* you connect to the central network so SpanCast can properly enable the AP interface.
 >
->If in your sketch you do call `SpanCast::configure()` *before* connecting to a central WiFi network using a library that *turns off the AP interface*, you can always re-enable it by calling `WIFI.enableAP(true)` *after* the connection library is called.  Setting the log level to "Warning" or greater wheh you compile your sketch will provide diagnostic messages to aid in debugging such situations.
+>If in your sketch you do call `SpanCast::configure()` *before* connecting to a central WiFi network using a library that *turns off the AP interface*, you can always re-enable it by calling `WIFI.enableAP(true)` *after* the connection library is called.  Setting the log level to "Warning" or greater when you compile your sketch will provide diagnostic messages to aid in debugging such situations.
 
 
 
