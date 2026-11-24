@@ -28,6 +28,10 @@ AND...
   * enables users to create custom, standalone ESP32-based sensors and controls that connect directly Apple HomeKit
   * low-power requirements of ESP-NOW mean such devices can be *battery-powered*
 
+## ❗Latest Update - SpanCast 1.0.0 (XX NOV 2026)
+
+This is the initial release of SpanCast.
+
 # SpanCast Quick-Start Overview
 
 SpanCast is implemented as a single C++ *class* providing both static functions and non-static methods.  To access SpanCast, simply add `#include "SpanCast.h"` to the top of your sketch.
@@ -52,7 +56,7 @@ After you have created a SpanCast object, simply call the `send(void *data)` met
 
 To receive data from the device at the other end of the link simply call the `get(void *dataBuf)` method on that SpanCast object.  If data is available from that device, `get()` will return *true* and the received message will be copied to the variable referenced by the pointer *dataBuf*.  If data is not available to be received from that device, `get()` will instead return *false* and *dataBuf* will be unmodified.  Repeatedly calling `get()` from within a loop is an easy way to "poll" for incoming messages transmitted to your device from other SpanCast devices.
 
-# A Basic Transmitter/Receiver Example
+## A Basic Transmitter/Receiver Example
 
 Just using the above, we can create a pair of sketches in which one device transmits a simple counting integer to another device every 5 seconds.  In this example we will set the *Device ID* to 3 for the transmitter the *Device ID* to 5 for the receiver.  Here is the sketch for the transmitting device:
 
@@ -113,7 +117,11 @@ void setup(){
 void loop() {}                                  // nothing is needed in the loop() function
 ```
 
-Note the differences in the SpanCast constructors in each sketch.  For the transmitter the second argument, *sendSize*, was set to the size of the counter and third argument, *receiveSize* was set to zero.  For the receiver, *sendSize* is set to zero and *receiveSize* is set to the size of the counter.
+> [!NOTE]
+> Note the differences in the SpanCast constructors in each sketch.  For the transmitter the second argument, *sendSize*, was set to the size of the counter and third argument, *receiveSize* was set to zero.  For the receiver, *sendSize* is set to zero and *receiveSize* is set to the size of the counter.
+
+> [!TIP]
+> Both of these sketches are included as part of the SpanCast library and can be found in the Arduino IDE under *File → Examples → SpanCast → Basic*.
 
 # SpanCast Optional Settings
 
@@ -149,7 +157,7 @@ SpanCast remoteDevice(5, sizeof(int), 0, { .queueDepth=2 } );
 
 Remember that in C++, designated initializers *must* be specified in the same order as they appear in the structure definition.  Skipping settings is fine (the defaults above will be applied), but specifying them out of order (i.e. first *.numTries* followed by *.password*) will result in a compilation error.
 
-## Optional Settings for *SpanCast::configure()*
+## Optional Settings when calling `SpanCast::configure()`
 
 The sections below fully describe the global settings structure, *SpConfig_t*, that can be passed to `SpanCast::configure()` as an optional second argument.
 
@@ -238,7 +246,7 @@ SpanCast provides two helper functions that convert a range or list of channels 
   * returns a *channelMask* allowing only those channels specified in *list*
   * example: `SpanCast::configure(3,{.channelMask=SpanCast::list( {1,3,5,6,9} )});`
 
-## Optional Settings for *SpanCast()*
+## Optional Settings when calling the `SpanCast()` constructor
 
 The sections below fully describe the per-link settings structure, *SpCast_t*, that can be passed to the `SpanCast()` constructor as an optional fourth argument.
 
@@ -291,41 +299,36 @@ There is no limit to the number of **unencrypted**, **receive-only** SpanCast li
 |ESP32|7|20|
 |ESP8266|10|20|
 
-# Example Sketches
+# Advanced "Weather Station" Example
 
-The Basic Transmitter/Receiver example sketches shown above can be found under the *File → Examples → SpanCast → Basic* menu of the Arduino IDE.  In addition, SpanCast includes a more detailed "WeatherStation" example that demonstrates bi-direction communication among 3 different devices: a Wind Speed Sensor, a Temperature/Humidity Sensor, and a Barometric Pressure Sensor.  Note the sketches only include simulated data as they are designed to illustrate how to use the different optional settings of SpanCast, not to actually measure weather factors.  The framework has been configured as follows:
+In addition to the Basic Transmitter/Receiver example sketches presented above in a prior section, the SpanCast library also includes a more detailed "Weather Station" example that demonstrates bi-direction communication among three different devices: a Wind Speed Sensor, a Temperature/Humidity Sensor, and a Barometric Pressure Sensor.  Sketches for each device can be found in the Arduino IDE under *File → Examples → SpanCast → WeatherStation*.
 
-* the Temp/Hum device, the Wind Speed device, and the Barometer device, have been assigned Device IDs of 1, 2, and 3, respectively
+Note the sketches only include **simulated** data as they are designed to illustrate how to use the different optional settings of SpanCast, not to actually take weather measurements.  The general setup for the three devices is as follows:
 
-* the Network ID has been set to 4 for each device.  This ensures  no interference with the Basic Receiver example above that also has a Device ID of 3, but retains the default Network ID of 1.
+* the Temp/Hum device, the Wind Speed device, and the Barometer device, have each been assigned a *Device ID* of 1, 2, and 3, respectively
+
+* for all three devices, the *Network ID* has been set to 4.  This ensures no interference with the Basic Receiver example sketch that also sets its *Device ID* to 3, but retains the default *Network ID* of 1
 
 * the WiFi channel for the Wind Speed device has been set to a fixed value of 5
 
-* the *channelMask* for both the Temp/Hum device and Barometer device have been set to autosynchronize allowing any channel from 1 to 11.  When these devices send data to the Wind Speed device for the first time, they will automatically synchronize to WiFi channel 5 and use that channel for all future transmissions, even if the power is cycled.[^channel5]  However, if a transmission fails, perhaps because you power off the Wind Speed device, the autosynchronization on these devices will try every channel from 1 to 11 again
+* the *channelMask* for both the Temp/Hum device and Barometer device have been set to autosynchronize allowing any channel from 1 to 11.  When either of these two devices send data to the Wind Speed device for the first time, they will each automatically synchronize to WiFi channel 5, and use that channel for all future transmissions, even if the power is cycled.[^channel5]  However, if a transmission fails, perhaps because you power off the Wind Speed device, the autosynchronization on these devices will try every channel from 1 to 11 until the Wind Speed device is powered on
 
-* Encryption remains globally enabled on the Temp/Hum device (which is the default), but has been globally disabled on the Wind Sensor and Barometer device.  However, for those devices to read the encrypted transmissions received from the Temp/Hum device, encryption is re-enabled on the specific links to the Temp/Hum device.[^disable]
+* Encryption remains globally enabled on the Temp/Hum device (which is the default), but has been globally disabled on the Wind Sensor and Barometer devices.  However, in order for those devices to read the encrypted transmissions received from the Temp/Hum device, encryption is re-enabled on the specific links to the Temp/Hum device[^disable]
 
-* each device continuously checks to see if there is new data received from any of the other devices and if so, it displays an updated view of all the weather data
+* the Temp/Hum device, the Wind Speed device, and the Barometer device, each update their simulated data every 5, 8, and 13 seconds, respectively.  After each update, the device transmits its new data to the other two devices, and then prints to the Serial Monitor an updated view of all the weather data it knows about
 
-* the Temp/Hum device, the Wind Speed device, and the Barometer device, each update their simulated data every 5, 8, and 13 seconds.  After each update the data is transmitted to the other device and an updated view of all weather data is displayed on the Serial Monitor.
+* each device repeatedly checks to see if there is new data received from any of the other devices, and if so, it displays an updated view of all the weather data on the Serial Monitor
 
-* each device continuously checks to see if there is new data received from any of the other devices and if so, it displays an updated view of all the weather data on the Serial Monitor
-
-* each device tracks whether it has been more than 60 seconds (the default) since data was received from the other devices.  If not, it prints a warning message to the Serial Monitor and displays that data as "--" instead of an outdated value.
+* each device tracks whether it has been more than 60 seconds (the default) since data was received from the other devices.  If not, it prints a warning message to the Serial Monitor and displays that data as "--" in the Serial Monitor rather than use an outdated value.
 
 [^channel5]: Note if your devices are in very close proximity it may be possible for transmissions to succeed even if the WiFi channels on the devices differ by one or two.  In such cases the Temp/Hum device and Barometer device may autosynchronize to channel 4 (and maybe even channel 3) if the transmissions using those channels are sufficiently reliable.  However, if this occurs and you start to increase the distance between your devices, you should see the autosynchronization update to WiFi channel 5 across all the devices as SpanCast finds transmissions on channel 4 (or channel 3) begin to fail.
 
 [^disable]: Note what happens if you alter the sketch and do not re-enable encryption on one of those links, say from the Wind Speed device to Temp/Hum device: the un-encrypted transmissions sent from the Wind Speed device to the Temp/Hum device will still be properly read by the Temp/Hum device, but the encrypted transmissions sent from the Temp/Hum device to the Wind Speed device will be ignored since the Wind Speed sensor will not be able to read the encrypted transmission with encryption disabled.
 
-These sketches can be found under the *File → Examples → SpanCast → WeatherStation* menu of the Arduino IDE.  In addition, a detailed example showing how SpanCast can be used to create a remote temperature sensor that interacts directly with HomeKit is provided as part of the [HomeSpan](https://github.com/HomeSpan/HomeSpan) Library.
+> [!TIP]
+> Example sketches showing how SpanCast can be used to create remote sensors that interact directly with HomeKit are provided as part of the [HomeSpan](https://github.com/HomeSpan/HomeSpan) Library.
 
-# The Complete SpanCast API 
-
-[TBD]
-
-## Technical Details (for those interested)
-
-### SpanCast Device Identification
+# SpanCast MAC Addresses and WiFi Interfaces
 
 SpanCast utilizes Espressif's ESP-NOW protocol for transmitting and receiving data.  ESP-NOW in turn uses the unique MAC addresses built into the WiFi stacks of ESP32 devices to identify which transmissions are intended for which recipients.  Implementing ESP-NOW directly in a sketch therefore requires you to either hardcode the MAC addresses of all the devices in your network, or to use a generic broadcast MAC address so that you transmit the same data to all device at the same time.  Unfortunately, each of the methods  has drawbacks:
 
@@ -333,7 +336,7 @@ SpanCast utilizes Espressif's ESP-NOW protocol for transmitting and receiving da
 
 * Using a broadcast MAC address to avoid hardcoding individual MAC addresses into a sketch means giving up ESP-NOW encryption and, even more importantly, the ability to easily verify whether transmissions were successfully received by their intended recipients.  SpanCast uses this ability to automatically synchronize WiFi channels across all of your devices, thereby ensuring your SpanCast data transmissions are successfully received.
 
-To solve these issues, SpanCast abstracts away the MAC addresses and instead uses the concept of a simple, user-definable SpanCast *Device ID* (and optional *Network ID*) that you create in each sketch as fully described in above.  Under the hood, SpanCast resets the MAC address for the device during the call to `configure()` based on the specified *Device ID* and *Network ID* as follows:
+To solve these issues, SpanCast abstracts away the MAC addresses and instead uses the concept of a simple, user-definable SpanCast *Device ID* (and optional *Network ID*) that you create in each sketch as fully described in the sections above.  Under the hood, SpanCast resets the MAC address for the device during the call to `configure()` based on the specified *Device ID* and *Network ID* as follows:
 
 * byte 0 of the MAC address is always set to F2, consistent with a MAC address that is *unicast* (least-significant bit is set zero) and *locally administered* (second-to-last bit is set to one)
 
@@ -347,7 +350,7 @@ To solve these issues, SpanCast abstracts away the MAC addresses and instead use
 
 For example, SpanCast will set the MAC address of a device with *Device ID=1* and *Network ID=4* (i.e. the Temp/Hum example above) to F2:04:01:00:F3:04.  SpanCast will displays this value in the Serial Monitor during the call to `configure()` if the log level is set to "Info" or greater.
 
-#### STA vs AP Interfaces
+## STA vs AP Interfaces
 
 The WiFi stacks on both the ESP32 and ESP8266 each support an STA interface (used to connect the device to a central WiFi network) and an AP interface (used to configure the device as an Access Point). On the ESP32, SpanCast utilizes the AP interface and therefore changes the MAC address only for that interfacing, leaving the MAC address for the STA interface untouched.  This is desirable since many WiFi routers can be configured to recognize the MAC addresses of the devices that are connected (or trying to connect) and may display a custom name for that device or may even determine whether to allow the device to join the network.  By utilizing the AP interface, SpanCast can freely change the MAC address of the interface without impacting the STA MAC address or how it may be used for recognition and permissioning by the central router to which the device is connected.
 
@@ -362,7 +365,79 @@ Note that SpanCast's use of the AP interface on the ESP32 versus its use of the 
 >
 >If in your sketch you do call `SpanCast::configure()` *before* connecting to a central WiFi network using a library that *turns off the AP interface*, you can always re-enable it by calling `WIFI.enableAP(true)` *after* the connection library is called.  Setting the log level to "Warning" or greater when you compile your sketch will provide diagnostic messages to aid in debugging such situations.
 
+# SpanCast API Reference
 
+Below is a summary reference of the full SpanCast API with a brief description of each class-level static function and object-level member method.  Messages reporting errors, warnings, or other diagnostic info are output to the Serial Monitor according to the log level specified under the *Tools → Core Debug Level* menu (for the ESP32) or the *Tools → Debug Level* menu (for the ESP8266) in the Arduino IDE when the sketch is compiled.
+
+### Static Class-Level Functions
+
+#### `static boolean configure(uint16_t deviceID [, SpConfig_t cfg])`
+
+* configures SpanCast and sets the SpanCast *Device ID* of the device to **deviceID**
+* this function must be called before any SpanCast objects can be created
+* returns `true` if configuration succeeds, else returns `false`
+* specifying the *optional* parameter **cfg** allows any of the following global SpanCast settings defined in the `SpConfig_t` structure to be overridden:
+
+  * `uint8_t` **network** - sets the SpanCast *Network ID* of the device (default=1)
+
+  * `String` **password** - sets the encryption password (default="spancast123")
+  * `boolean` **encrypt** - enables global encryption if `true`, otherwise disables global encryption (default=`true`)
+  * `uint16_t` **channelMask** - sets the bitmask specifying the WiFi channels (from 1 through 14; bits 0 and 15 are ignored) SpanCast can use during WiFi autosynchronization. Setting just a single bit results in SpanCast always using the corresponding channel.  Setting **channelMask** to zero disables autosynchronization and prohibits SpanCast from altering the WiFi channel (default=0)
+  * `uint8_t` **numTries** - sets the number of times SpanCast attempts to transmit a message on any given WiFi channel before repeated failures cause it to try another channel.  Only applicable if **channelMask** is non-zero (default=3)
+
+* note **cfg** can be defined as a separate variable of type `SpConfig_t` or simply expressed as a brace-enclosed initialization list specifying the settings to override (in the order listed above)
+
+  * example: `SpanCast::configure(5, {.encrypt=false, .numTries=5});`
+
+#### `static uint16_t list(std::initializer_list<uint8_t> list)`
+
+* returns a **channelMask** representing the specified **list** of WiFi channels
+* example: `SpanCast::configure(5 ,{ .channelMask=SpanCast::list({1,6,11}) });`
+
+#### `static uint16_t range(uint8_t start, uint8_t end)`
+
+* returns a **channelMask** representing all WiFi channel from **start** to **end**, inclusive
+
+* example: `SpanCast::configure(5 ,{.channelMask=SpanCast::range(1,11)});`
+
+#### `static int maxMessageSize()`
+
+* returns the maximum message size that SpanCast can transmit or receive
+
+* set to 1434 bytes for ESP32 devices and 214 bytes for ESP8266 devices
+
+#### `static const char *version()`
+
+* returns the SpanCast version as a string in the standard form "X.Y.Z"
+
+### Object-Level Member Methods
+
+#### `SpanCast(uint16_t deviceID, size_t sendSize, size_t receiveSize [, SpCast_t settings])`
+
+* constructor to create a new SpanCast object representing a link that transmits **sendSize** bytes to, and/or receives **receiveSize** bytes from, a remote device with a *Device ID* of **deviceID**
+
+* specifying the *optional* parameter **settings** allows any of the following per-link SpanCast settings defined in the `SpCast_t` structure to be overridden:
+
+  * `boolean` **encrypt** - determines whether message encryption is enabled or disabled for this link.  If *either* **encrypt** is set to `true` *or* encryption has been enabled at the global level, encryption for this link will be enabled.  If *both* **encrypt** is set to `false` *and* encryption has been disabled at the global level (by setting **encrypt** to `false` in the call to `configure()`), encryption for this link will be disabled (default=`false`)
+
+  * `size_t` **queueDepth** - sets the depth of the message receive queue to **queueDepth**. A value of zero causes new messages to overwrite any existing message already in the queue. A value greater than zero stores that number of messages and discards any new ones until messages are extracted from the queue with a call to `get()` (default=0)
+  * `uint32_t` **timeout** - if SpanCast has not received any valid messages for this link in **timeout** milliseonds, the link will be flagged as *inactive* (default=60000, i.e. 60 seconds)
+
+* note **settings** can be defined as a separate variable of type `SpCast_t` or simply expressed as a brace-enclosed initialization list specifying the settings to override (in the order listed above)
+
+  * example: `SpanCast sensorDevice(7, 0, sizeof(uint16_t), {.queueDepth=3});`
+
+* if the constructor is called before SpanCast has been successfully configured, or if any combination of the required or optional parameters specified are found to be invalid, SpanCast will create the object but flag it as *uninitialized*
+
+* the `bool()` operator for a SpanCast object has been overloaded to return `true` if the link has been initialized, else `false` if it is uninitialized
+
+  * example: `if(!sensorDevice) Serial.printf("Sensor not initialized!");`
+
+#### `boolean send(const void *data)`
+
+#### `boolean get(void *dataBuf)`
+
+#### `boolean isActive()`
 
 
 
