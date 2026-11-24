@@ -367,7 +367,7 @@ Note that SpanCast's use of the AP interface on the ESP32 versus its use of the 
 
 # SpanCast API Reference
 
-Below is a summary reference of the full SpanCast API with a brief description of each class-level static function and object-level member method.  Messages reporting errors, warnings, or other diagnostic info are output to the Serial Monitor according to the log level specified under the *Tools → Core Debug Level* menu (for the ESP32) or the *Tools → Debug Level* menu (for the ESP8266) in the Arduino IDE when the sketch is compiled.
+Below is a summary reference of the full SpanCast API with a brief description of each class-level static function and object-level member method.  Messages reporting errors, warnings, and other diagnostic info are output to the Serial Monitor according to the log level specified under the *Tools → Core Debug Level* menu (for the ESP32) or the *Tools → Debug Level* menu (for the ESP8266) in the Arduino IDE when the sketch is compiled.
 
 ### Static Class-Level Functions
 
@@ -435,12 +435,35 @@ Below is a summary reference of the full SpanCast API with a brief description o
 
 #### `boolean send(const void *data)`
 
+* if the link is not initialized *or* the link's **sendSize** parameter is zero, SpanCast simply exits the function and returns `false`
+
+* otherwise, SpanCast transmits the data referenced by **data** to the destination device having a *Device ID* equal to the link's **deviceID** parameter
+
+  * a value of `true` is returned if SpanCast receives an acknowledgement from the WiFi stack of the intended destination device that it has received the data, *regardless of whether or not the destination device was able to properly decrypt the data, process the data, store the data in a receive queue, etc.*
+
+  * a value of `false` is returned if, after trying to transmit the data **numTries** times for each WiFi channel allowed by the **channelMask**, SpanCast nevertheless fails to receive an acknowledgement from the WiFi stack of the intended destination device that it has received the data
+
+* note that SpanCast expects (but does not check!) that **data** points to a valid memory location containing at least **sendSize** bytes of data
+
 #### `boolean get(void *dataBuf)`
+
+* if the link is not initialized *or* the link's **receiveSize** parameter is zero, SpanCast simply exits the function and returns `false`
+
+* otherwise, SpanCast checks the link's receive queue for data
+
+  * if a message is available SpanCast moves the data from the receive queue to **dataBuf** and returns `true`
+  
+  * if the queue is empty SpanCast does nothing and returns `false`
+
+* note that SpanCast expects (but does not check!) that **dataBuf** points to a valid memory location sized to store at least **receiveSize** bytes of data
 
 #### `boolean isActive()`
 
+* if the link is not initialized *or* the link's **receiveSize** parameter is zero, SpanCast simply exits the function and returns `false`
 
+* otherwise, SpanCast returns `true` if a message has been received for this link within the last **timeout** milliseconds, else it returns `false`
 
+* this function will always return `false` upon start-up until at least one message has been received for this link
 
 
 

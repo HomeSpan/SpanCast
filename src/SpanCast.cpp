@@ -396,6 +396,12 @@ void SpanCast::setChannel(uint8_t channel){
 
 boolean SpanCast::isActive(){
 
+  if(!initialized)
+    return(false);
+
+  if(receiveSize==0)
+    return(false);
+  
   UNIQUE_LOCK(lock,receiveLock);
 
   if(active && (millis()-receiveTime) > spCast.timeout)
