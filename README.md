@@ -27,7 +27,8 @@ AND...
   * enables users to create custom, standalone ESP32-based sensors and controls that connect directly to Apple HomeKit
   * low-power requirements of ESP-NOW mean such devices can be *battery-powered*
 
-> ## Latest Update - SpanCast 1.0.0 (XX NOV 2026)
+> ## PRE-RELEASE.  FINAL PRODUCTION VERSION COMING SHORTLY
+> Latest Update - SpanCast 1.0.0 (XX NOV 2026)
 >
 > This is the initial release of SpanCast
 
