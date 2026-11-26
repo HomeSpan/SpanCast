@@ -116,8 +116,7 @@ void setup(){
 void loop() {}                                  // nothing is needed in the loop() function
 ```
 
-> [!NOTE]
-> Note the differences in the SpanCast constructors in each sketch.  For the transmitter the second argument, **sendSize**, was set to the size of the counter and third argument, **receiveSize** was set to zero.  For the receiver, **sendSize** is set to zero and **receiveSize** is set to the size of the counter.
+Note the differences in the SpanCast constructors in each sketch.  For the transmitter the second argument, **sendSize**, was set to the size of the counter and third argument, **receiveSize** was set to zero.  For the receiver, **sendSize** is set to zero and **receiveSize** is set to the size of the counter.
 
 > [!TIP]
 > Both of these sketches are included as part of the SpanCast library and can be found in the Arduino IDE under *File → Examples → SpanCast → Basic*.
