@@ -57,7 +57,7 @@ struct WeatherData {
 
 // Create global time counter to keep track of when to next send data
 
-uint32_t updateTime=0;
+uint32_t updateTime=millis()-UPDATE_FREQUENCY;     // this creates a "negative" unsigned number that allows timer below to trigger at startup
 
 //////////////////////
 
