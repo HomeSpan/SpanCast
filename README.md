@@ -1,8 +1,8 @@
 # SpanCast: Peer-to-Peer Messaging Made Simple
 
-SpanCast is a lightweight and easy-to-use peer-to-peer messaging system for ESP32 devices packaged as a ready-to-run library under the [Arduino-ESP32 Core](https://github.com/espressif/arduino-esp32). SpanCast is based on Espressif's ESP-NOW protocol and provides bi-directional, point-to-point communication of short, fixed-size messages directly between ESP32 devices using those device's WiFi radios but *without the need for a central WiFi network*.
+SpanCast is a lightweight and easy-to-use peer-to-peer messaging system for ESP32 devices packaged as a ready-to-run library under the [Arduino-ESP32 Core](https://github.com/espressif/arduino-esp32) allowing you to create sketches directly in the Arduino IDE. SpanCast is based on Espressif's ESP-NOW protocol and provides bi-directional, point-to-point communication of short, fixed-size messages directly between ESP32 devices using those device's WiFi radios but *without the need for a central WiFi network*.
 
-Key features of SpanCast include:
+### Key features of SpanCast include:
 
 * **Automatic Channel Management**
 
@@ -27,9 +27,9 @@ AND...
   * enables users to create custom, standalone ESP32-based sensors and controls that connect directly to Apple HomeKit
   * low-power requirements of ESP-NOW mean such devices can be *battery-powered*
 
-### SpanCast Release Status
+### Current SpanCast Release
 
-| Current Production Version | **1.0.0** |
+| Production Version | **1.0.0** |
 |:---:|:---:|
 | Release Date| **27 Nov 2026** |
 | Supported ESP32 Chips | **ESP32, S2, S3, C3, C5, C6** 
