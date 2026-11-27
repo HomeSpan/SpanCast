@@ -27,10 +27,16 @@ AND...
   * enables users to create custom, standalone ESP32-based sensors and controls that connect directly to Apple HomeKit
   * low-power requirements of ESP-NOW mean such devices can be *battery-powered*
 
-> ## PRE-RELEASE.  FINAL PRODUCTION VERSION COMING SHORTLY
-> Latest Update - SpanCast 1.0.0 (XX NOV 2026)
->
-> This is the initial release of SpanCast
+### SpanCast Release Status
+
+| Current Production Version | **1.0.0** |
+|:---:|:---:|
+| Release Date| **27 Nov 2026** |
+| Supported ESP32 Chips | **ESP32, S2, S3, C3, C5, C6** 
+| Minimum Required [Arduino-ESP32 Core](https://github.com/espressif/arduino-esp32) | **3.3.0** | 
+| Latest Core fully tested with SpanCast | **4.0.0** |
+
+*For the legacy ESP8266 chip, please use final version 3.1.2 of the [Arduino-ESP8266 Core](https://github.com/esp8266/arduino) (available in the Arduino IDE)*
 
 # SpanCast Quick-Start Overview
 
