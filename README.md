@@ -310,6 +310,22 @@ In addition to the Basic Transmitter/Receiver example sketches presented above i
 
 Note the sketches only include *simulated* data as they are designed to illustrate how to use the different optional settings of SpanCast, not to actually take weather measurements.  The general setup for the three devices is as follows:
 
+```mermaid
+flowchart LR
+    temp("`**Temp/Humid**
+        *Device ID=1*
+        *Channels=[1-11]*`")
+    wind("`**Wind Speed**
+        *Device ID=2*
+        *Channel=5*`")
+    baro("`**Barometer**
+        *Device ID=3*
+        *Channels=[1-11]*`")
+    temp<-- encrypted -->wind
+    wind<-- unencrypted -->baro
+    temp<-- encrypted -->baro
+```
+
 * the Temp/Hum device, the Wind Speed device, and the Barometer device, have each been assigned a *Device ID* of 1, 2, and 3, respectively
 
 * for all three devices, the *Network ID* has been set to 4.  This ensures no interference with the Basic Receiver example sketch that also sets its *Device ID* to 3, but retains the default *Network ID* of 1
