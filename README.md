@@ -311,6 +311,11 @@ In addition to the Basic Transmitter/Receiver example sketches presented above i
 Note the sketches only include *simulated* data as they are designed to illustrate how to use the different optional settings of SpanCast, not to actually take weather measurements.  The general setup for the three devices is as follows:
 
 ```mermaid
+---
+config:
+  themeVariables:
+    edgeLabelBackground: "#ffffff"
+---
 flowchart LR
   subgraph "`*Network ID=4*`"
     temp("`**Temp/Humid**
