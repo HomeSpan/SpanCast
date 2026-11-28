@@ -312,6 +312,7 @@ Note the sketches only include *simulated* data as they are designed to illustra
 
 ```mermaid
 flowchart LR
+  subgraph "`*Network ID=4*`"
     temp("`**Temp/Humid**
         *Device ID=1*
         *Channels=[1-11]*`")
@@ -321,9 +322,10 @@ flowchart LR
     baro("`**Barometer**
         *Device ID=3*
         *Channels=[1-11]*`")
-    temp<-- encrypted -->wind
-    wind<-- unencrypted -->baro
-    temp<-- encrypted -->baro
+    temp<-- "encrypted" -->wind
+    wind<-- "unencrypted" -->baro
+    temp<-- "encrypted" -->baro
+  end
 ```
 
 * the Temp/Hum device, the Wind Speed device, and the Barometer device, have each been assigned a *Device ID* of 1, 2, and 3, respectively
